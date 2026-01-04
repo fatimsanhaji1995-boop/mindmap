@@ -20,12 +20,33 @@ function App() {
   const [selectedNodes, setSelectedNodes] = useState([]);
   const [showOGMode, setShowOGMode] = useState(false);
   const [recordedOGPositions, setRecordedOGPositions] = useState({ nodes: [], links: [] });
-  const [showControls, setShowControls] = useState(true);
-  const [showFileOps, setShowFileOps] = useState(true);
-  const [showAddNode, setShowAddNode] = useState(true);
-  const [showDeleteNode, setShowDeleteNode] = useState(true);
-  const [showAddLink, setShowAddLink] = useState(true);
-  const [showQuickActions, setShowQuickActions] = useState(true);
+  const [showControls, setShowControls] = useState(false);
+  const [showFileOps, setShowFileOps] = useState(false);
+  const [showAddNode, setShowAddNode] = useState(false);
+  const [showDeleteNode, setShowDeleteNode] = useState(false);
+  const [showAddLink, setShowAddLink] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(false);
+
+  // Dynamic panel positioning logic
+  const getPanelX = (panelId) => {
+    const panelOrder = ['file-ops', 'add-node', 'delete-node', 'add-link', 'quick-actions'];
+    const panelStates = {
+      'file-ops': showFileOps,
+      'add-node': showAddNode,
+      'delete-node': showDeleteNode,
+      'add-link': showAddLink,
+      'quick-actions': showQuickActions
+    };
+    
+    let visibleCountBefore = 0;
+    for (const id of panelOrder) {
+      if (id === panelId) break;
+      if (panelStates[id]) visibleCountBefore++;
+    }
+    
+    return 20 + (visibleCountBefore * (window.innerWidth * 0.2 + 20));
+  };
+
   const [selectedFileForLoad, setSelectedFileForLoad] = useState(null);
   const [loadedFileName, setLoadedFileName] = useState("graphData.json");
   const [isFocusMode, setIsFocusMode] = useState(false); // New state for focus mode
@@ -793,7 +814,7 @@ function App() {
         <FloatablePanel
           id="file-ops-panel"
           title="File Operations"
-          defaultPosition={{ x: 20, y: 80 }}
+          defaultPosition={{ x: getPanelX("file-ops"), y: 80 }}
           defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
           minWidth={250}
           minHeight={300}
@@ -857,7 +878,7 @@ function App() {
         <FloatablePanel
           id="add-node-panel"
           title="Add Node"
-          defaultPosition={{ x: window.innerWidth * 0.2 + 40, y: 80 }}
+          defaultPosition={{ x: getPanelX("add-node"), y: 80 }}
           defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
           minWidth={250}
           minHeight={200}
@@ -905,7 +926,7 @@ function App() {
         <FloatablePanel
           id="delete-node-panel"
           title="Delete Node"
-          defaultPosition={{ x: window.innerWidth * 0.4 + 60, y: 80 }}
+          defaultPosition={{ x: getPanelX("delete-node"), y: 80 }}
           defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
           minWidth={250}
           minHeight={150}
@@ -958,7 +979,7 @@ function App() {
         <FloatablePanel
           id="add-link-panel"
           title="Create Link"
-          defaultPosition={{ x: window.innerWidth * 0.6 + 80, y: 80 }}
+          defaultPosition={{ x: getPanelX("add-link"), y: 80 }}
           defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
           minWidth={250}
           minHeight={350}
@@ -1086,7 +1107,7 @@ function App() {
         <FloatablePanel
           id="quick-actions-panel"
           title="Quick Actions"
-          defaultPosition={{ x: window.innerWidth * 0.8 + 100, y: 80 }}
+          defaultPosition={{ x: getPanelX("quick-actions"), y: 80 }}
           defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
           minWidth={250}
           minHeight={200}
