@@ -789,7 +789,7 @@ function App() {
           id="controls-panel"
           title="3D Node Graph"
           defaultPosition={{ x: 20, y: 20 }}
-          defaultSize={{ width: 380, height: 600 }}
+          defaultSize={{ width: window.innerWidth * 0.3, height: 800 }}
           minWidth={300}
           minHeight={400}
           isDraggable={true}

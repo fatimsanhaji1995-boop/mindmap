@@ -168,3 +168,43 @@
     min-width: 105px !important; /* 30% reduction from 150px */
   }
 }
+
+/* Custom Blue Button Styles */
+[data-slot="button"] {
+  background-color: #2563eb !important;
+  color: white !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  transition: background-color 0.2s ease !important;
+  max-width: 100% !important; /* Override the 70% restriction for better look in panels */
+}
+
+[data-slot="button"]:hover {
+  background-color: #1d4ed8 !important;
+}
+
+[data-slot="button"][variant="outline"] {
+  background-color: transparent !important;
+  border: 1px solid #2563eb !important;
+  color: #2563eb !important;
+}
+
+[data-slot="button"][variant="outline"]:hover {
+  background-color: #eff6ff !important;
+}
+
+[data-slot="button"][variant="destructive"] {
+  background-color: #ef4444 !important;
+}
+
+[data-slot="button"][variant="destructive"]:hover {
+  background-color: #dc2626 !important;
+}
+
+/* Input and Select styling to match white interface */
+[data-slot="input"], [data-slot="select-trigger"] {
+  background-color: #f9fafb !important;
+  border: 1px solid #e5e7eb !important;
+  color: #111827 !important;
+  max-width: 100% !important;
+}

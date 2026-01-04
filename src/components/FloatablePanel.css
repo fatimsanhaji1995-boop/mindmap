@@ -1,11 +1,10 @@
 /* FloatablePanel Styles */
 
 .floatable-panel {
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 
-              0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
   background: white;
-  border: 1px solid hsl(var(--border));
+  border: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -13,14 +12,8 @@
 }
 
 .floatable-panel.dragging {
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25),
-              0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   cursor: grabbing;
-}
-
-.floatable-panel.resizing {
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25),
-              0 25px 50px -12px rgba(0, 0, 0, 0.15);
 }
 
 .floatable-panel-container {
@@ -35,12 +28,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.9) 100%);
-  color: white;
+  padding: 12px 16px;
+  background: white;
+  color: black;
   cursor: grab;
   user-select: none;
-  border-bottom: 1px solid hsl(var(--border));
+  border-bottom: 1px solid #f3f4f6;
   flex-shrink: 0;
 }
 
@@ -55,32 +48,27 @@
   flex: 1;
 }
 
-.floatable-panel-grip-icon {
-  opacity: 0.7;
-  flex-shrink: 0;
-}
-
 .floatable-panel-title {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 700;
   margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  color: #111827;
 }
 
 .floatable-panel-close-btn {
-  color: white;
-  opacity: 0.8;
-  transition: opacity 0.2s ease;
-  padding: 0.25rem;
-  height: auto;
-  width: auto;
+  color: #6b7280;
+  background: #f3f4f6;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
 }
 
 .floatable-panel-close-btn:hover {
-  opacity: 1;
-  background-color: rgba(255, 255, 255, 0.2);
+  background: #e5e7eb;
+  color: #374151;
 }
 
 /* Content Styles */
@@ -88,27 +76,22 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 1rem;
+  padding: 16px;
   background: white;
 }
 
-/* Custom scrollbar for content area */
+/* Custom scrollbar */
 .floatable-panel-content::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 .floatable-panel-content::-webkit-scrollbar-track {
-  background: hsl(var(--muted));
-  border-radius: 3px;
+  background: transparent;
 }
 
 .floatable-panel-content::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground));
-  border-radius: 3px;
-}
-
-.floatable-panel-content::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--foreground) / 0.5);
+  background: #d1d5db;
+  border-radius: 10px;
 }
 
 /* Resize Handle */
@@ -116,70 +99,19 @@
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   cursor: se-resize;
-  background: linear-gradient(135deg, transparent 0%, hsl(var(--border)) 100%);
-  border-radius: 0 0 0.5rem 0;
+  background: transparent;
 }
 
-.floatable-panel-resize-handle::after {
-  content: '';
-  position: absolute;
-  bottom: 2px;
-  right: 2px;
-  width: 12px;
-  height: 12px;
-  background: repeating-linear-gradient(
-    45deg,
-    hsl(var(--muted-foreground) / 0.3),
-    hsl(var(--muted-foreground) / 0.3) 2px,
-    transparent 2px,
-    transparent 4px
-  );
-  border-radius: 0 0 2px 0;
-}
-
-.floatable-panel-resize-handle:hover::after {
-  background: repeating-linear-gradient(
-    45deg,
-    hsl(var(--muted-foreground) / 0.6),
-    hsl(var(--muted-foreground) / 0.6) 2px,
-    transparent 2px,
-    transparent 4px
-  );
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .floatable-panel {
-    border-radius: 0.375rem;
-  }
-
-  .floatable-panel-header {
-    padding: 0.5rem 0.75rem;
-  }
-
-  .floatable-panel-content {
-    padding: 0.75rem;
-  }
-
-  .floatable-panel-title {
-    font-size: 0.8125rem;
-  }
-}
-
-/* Dark mode support */
+/* Force white background even in dark mode for this specific component */
 @media (prefers-color-scheme: dark) {
-  .floatable-panel {
-    background: hsl(var(--card));
+  .floatable-panel, .floatable-panel-content, .floatable-panel-header {
+    background: white !important;
+    color: black !important;
   }
-
-  .floatable-panel-content {
-    background: hsl(var(--card));
-  }
-
-  .floatable-panel-header {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.8) 100%);
+  .floatable-panel-title {
+    color: #111827 !important;
   }
 }
