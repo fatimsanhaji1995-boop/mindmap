@@ -1,20 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X, GripVertical } from 'lucide-react';
-import { Button } from '@/components/ui/button.jsx';
 import './FloatablePanel.css';
 
-/**
- * FloatablePanel Component
- * A draggable and resizable panel that floats above other content
- */
 export const FloatablePanel = ({
   id = 'panel',
   title = 'Panel',
   children,
   onClose,
   defaultPosition = { x: 20, y: 20 },
-  defaultSize = { width: 400, height: 'auto' },
+  defaultSize = { width: 300, height: 'auto' },
   minWidth = 250,
   minHeight = 100,
   isDraggable = true,
@@ -28,42 +23,61 @@ export const FloatablePanel = ({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const panelRef = useRef(null);
-  const headerRef = useRef(null);
 
-  // Handle drag start
+  // Update position when defaultPosition changes (important for dynamic alignment)
+  useEffect(() => {
+    setPosition(defaultPosition);
+  }, [defaultPosition.x, defaultPosition.y]);
+
+  // Handle drag start (Mouse & Touch)
   const handleDragStart = (e) => {
     if (!isDraggable) return;
     if (e.target.closest('[data-no-drag]')) return;
 
+    const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+
     setIsDragging(true);
     const rect = panelRef.current.getBoundingClientRect();
     setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: clientX - rect.left,
+      y: clientY - rect.top,
     });
+    
+    // Prevent scrolling on touch
+    if (e.type === 'touchstart') {
+      // e.preventDefault(); // Can cause issues with buttons inside
+    }
   };
 
   // Handle drag move
   useEffect(() => {
     if (!isDragging) return;
 
-    const handleMouseMove = (e) => {
+    const handleMove = (e) => {
+      const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+      const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+
       setPosition({
-        x: e.clientX - dragOffset.x,
-        y: e.clientY - dragOffset.y,
+        x: clientX - dragOffset.x,
+        y: clientY - dragOffset.y,
       });
     };
 
-    const handleMouseUp = () => {
+    const handleEnd = () => {
       setIsDragging(false);
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleEnd);
+    document.addEventListener('touchmove', handleMove, { passive: false });
+    document.addEventListener('touchend', handleEnd);
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mousemove', handleMove);
+      document.removeEventListener('mouseup', handleEnd);
+      document.removeEventListener('touchmove', handleMove);
+      document.removeEventListener('touchend', handleEnd);
     };
   }, [isDragging, dragOffset]);
 
@@ -73,11 +87,14 @@ export const FloatablePanel = ({
     e.preventDefault();
     e.stopPropagation();
 
+    const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+    const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+
     setIsResizing(true);
     const rect = panelRef.current.getBoundingClientRect();
     setResizeStart({
-      x: e.clientX,
-      y: e.clientY,
+      x: clientX,
+      y: clientY,
       width: rect.width,
       height: rect.height,
     });
@@ -87,9 +104,12 @@ export const FloatablePanel = ({
   useEffect(() => {
     if (!isResizing) return;
 
-    const handleMouseMove = (e) => {
-      const deltaX = e.clientX - resizeStart.x;
-      const deltaY = e.clientY - resizeStart.y;
+    const handleMove = (e) => {
+      const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+      const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+
+      const deltaX = clientX - resizeStart.x;
+      const deltaY = clientY - resizeStart.y;
 
       setSize({
         width: Math.max(minWidth, resizeStart.width + deltaX),
@@ -97,16 +117,20 @@ export const FloatablePanel = ({
       });
     };
 
-    const handleMouseUp = () => {
+    const handleEnd = () => {
       setIsResizing(false);
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleEnd);
+    document.addEventListener('touchmove', handleMove, { passive: false });
+    document.addEventListener('touchend', handleEnd);
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mousemove', handleMove);
+      document.removeEventListener('mouseup', handleEnd);
+      document.removeEventListener('touchmove', handleMove);
+      document.removeEventListener('touchend', handleEnd);
     };
   }, [isResizing, resizeStart, minWidth, minHeight]);
 
@@ -122,6 +146,7 @@ export const FloatablePanel = ({
         height: size.height,
         maxHeight: '90vh',
         zIndex: isDragging || isResizing ? 9999 : 100,
+        touchAction: 'none', // Critical for touch dragging
       }}
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -130,10 +155,10 @@ export const FloatablePanel = ({
     >
       <div className="floatable-panel-container">
         <div
-          ref={headerRef}
           className="floatable-panel-header"
           onMouseDown={handleDragStart}
-          data-no-drag={!isDraggable}
+          onTouchStart={handleDragStart}
+          style={{ cursor: isDraggable ? 'grab' : 'default' }}
         >
           <div className="floatable-panel-header-content">
             {isDraggable && (
@@ -160,6 +185,7 @@ export const FloatablePanel = ({
           <div
             className="floatable-panel-resize-handle"
             onMouseDown={handleResizeStart}
+            onTouchStart={handleResizeStart}
           />
         )}
       </div>
