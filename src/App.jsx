@@ -793,7 +793,7 @@ function App() {
         <FloatablePanel
           id="file-ops-panel"
           title="File Operations"
-          defaultPosition={{ x: 20, y: 70 }}
+          defaultPosition={{ x: 20, y: 80 }}
           defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
           minWidth={250}
           minHeight={300}
@@ -857,7 +857,7 @@ function App() {
         <FloatablePanel
           id="add-node-panel"
           title="Add Node"
-          defaultPosition={{ x: 20, y: 400 }}
+          defaultPosition={{ x: window.innerWidth * 0.2 + 40, y: 80 }}
           defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
           minWidth={250}
           minHeight={200}
@@ -905,7 +905,7 @@ function App() {
         <FloatablePanel
           id="delete-node-panel"
           title="Delete Node"
-          defaultPosition={{ x: 20, y: 600 }}
+          defaultPosition={{ x: window.innerWidth * 0.4 + 60, y: 80 }}
           defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
           minWidth={250}
           minHeight={150}
@@ -958,7 +958,7 @@ function App() {
         <FloatablePanel
           id="add-link-panel"
           title="Create Link"
-          defaultPosition={{ x: window.innerWidth * 0.2 + 40, y: 70 }}
+          defaultPosition={{ x: window.innerWidth * 0.6 + 80, y: 80 }}
           defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
           minWidth={250}
           minHeight={350}
@@ -1086,7 +1086,7 @@ function App() {
         <FloatablePanel
           id="quick-actions-panel"
           title="Quick Actions"
-          defaultPosition={{ x: window.innerWidth * 0.2 + 40, y: 450 }}
+          defaultPosition={{ x: window.innerWidth * 0.8 + 100, y: 80 }}
           defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
           minWidth={250}
           minHeight={200}
