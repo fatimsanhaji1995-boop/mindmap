@@ -829,7 +829,7 @@ function App() {
           id="file-ops-panel"
           title="File Operations"
           defaultPosition={{ x: getPanelX("file-ops"), y: 80 }}
-          defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
+          defaultSize={{ width: window.innerWidth * 0.26, height: 'auto' }}
           minWidth={250}
           minHeight={300}
           onClose={() => setShowFileOps(false)}
@@ -893,7 +893,7 @@ function App() {
           id="add-node-panel"
           title="Add Node"
           defaultPosition={{ x: getPanelX("add-node"), y: 80 }}
-          defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
+          defaultSize={{ width: window.innerWidth * 0.26, height: 'auto' }}
           minWidth={250}
           minHeight={200}
           onClose={() => setShowAddNode(false)}
@@ -941,7 +941,7 @@ function App() {
           id="delete-node-panel"
           title="Delete Node"
           defaultPosition={{ x: getPanelX("delete-node"), y: 80 }}
-          defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
+          defaultSize={{ width: window.innerWidth * 0.26, height: 'auto' }}
           minWidth={250}
           minHeight={150}
           onClose={() => setShowDeleteNode(false)}
@@ -994,7 +994,7 @@ function App() {
           id="add-link-panel"
           title="Create Link"
           defaultPosition={{ x: getPanelX("add-link"), y: 80 }}
-          defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
+          defaultSize={{ width: window.innerWidth * 0.26, height: 'auto' }}
           minWidth={250}
           minHeight={350}
           onClose={() => setShowAddLink(false)}
@@ -1122,7 +1122,7 @@ function App() {
           id="quick-actions-panel"
           title="Quick Actions"
           defaultPosition={{ x: getPanelX("quick-actions"), y: 80 }}
-          defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
+          defaultSize={{ width: window.innerWidth * 0.26, height: 'auto' }}
           minWidth={250}
           minHeight={200}
           onClose={() => setShowQuickActions(false)}
@@ -1158,7 +1158,7 @@ function App() {
           id="og-mode-panel"
           title="OG Mode"
           defaultPosition={{ x: window.innerWidth * 0.7, y: 80 }}
-          defaultSize={{ width: 300, height: 'auto' }}
+          defaultSize={{ width: 400, height: 'auto' }}
           onClose={() => setShowOGMode(false)}
         >
           <div className="space-y-4">
@@ -1194,7 +1194,7 @@ function App() {
           id="camera-controls-panel"
           title="Camera Controls"
           defaultPosition={{ x: window.innerWidth * 0.7, y: 450 }}
-          defaultSize={{ width: 350, height: 'auto' }}
+          defaultSize={{ width: 450, height: 'auto' }}
           onClose={() => setShowCameraControls(false)}
         >
           <div className="space-y-4">
@@ -1281,7 +1281,7 @@ function App() {
           id="node-editor-panel"
           title={`Edit Node: ${selectedNodeForEdit.id}`}
           defaultPosition={{ x: getPanelX("node-editor"), y: 80 }}
-          defaultSize={{ width: 300, height: 'auto' }}
+          defaultSize={{ width: 400, height: 'auto' }}
           onClose={() => {
             setSelectedNodeForEdit(null);
             setSelectedLinkForEdit(null);
@@ -1323,7 +1323,7 @@ function App() {
           id="link-editor-panel"
           title="Edit Link"
           defaultPosition={{ x: getPanelX("link-editor"), y: 80 }}
-          defaultSize={{ width: 300, height: 'auto' }}
+          defaultSize={{ width: 400, height: 'auto' }}
           onClose={() => setSelectedLinkForEdit(null)}
         >
           <div className="space-y-4">

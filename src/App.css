@@ -231,3 +231,24 @@
 [data-radix-popper-content-wrapper] {
   z-index: 10000 !important;
 }
+
+.floatable-panel button:not(.floatable-panel-close-btn),
+.floatable-panel input,
+.floatable-panel select,
+.floatable-panel .w-full {
+  min-width: 130% !important;
+  width: 130% !important;
+}
+
+/* Ensure the container doesn't clip the wider elements */
+.floatable-panel-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+}
+
+/* Adjust labels to match the wider elements */
+.floatable-panel label {
+  width: 130% !important;
+}
