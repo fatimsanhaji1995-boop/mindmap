@@ -144,7 +144,7 @@ export const FloatablePanel = ({
         top: position.y,
         width: size.width,
         height: size.height,
-        maxHeight: '90vh',
+        
         zIndex: isDragging || isResizing ? 9999 : 100,
         touchAction: 'none', // Critical for touch dragging
       }}
@@ -177,7 +177,7 @@ export const FloatablePanel = ({
           )}
         </div>
 
-        <div className="floatable-panel-content">
+        <div className="floatable-panel-content overflow-y-auto max-h-[80vh]">
           {children}
         </div>
 
