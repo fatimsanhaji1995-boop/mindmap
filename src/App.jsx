@@ -1230,6 +1230,18 @@ function App() {
                 setSelectedNodeForEdit(prev => ({ ...prev, color: newColor }));
               }} />
             </div>
+            <div className="space-y-2">
+              <Label>Text Size: {selectedNodeForEdit.textSize || 6}</Label>
+              <Slider
+                value={[selectedNodeForEdit.textSize || 6]}
+                onValueChange={(value) => {
+                  const newSize = value[0];
+                  setGraphData(prev => ({...prev, nodes: prev.nodes.map(n => n.id === selectedNodeForEdit.id ? { ...n, textSize: newSize } : n)}));
+                  setSelectedNodeForEdit(prev => ({ ...prev, textSize: newSize }));
+                }}
+                min={1} max={20} step={1} className="w-full"
+              />
+            </div>
           </div>
         </FloatablePanel>
       )}
@@ -1260,6 +1272,24 @@ function App() {
                 })}));
                 setSelectedLinkForEdit(prev => ({ ...prev, color: newColor }));
               }} />
+            </div>
+            <div className="space-y-2">
+              <Label>Thickness: {selectedLinkForEdit.thickness || 1}</Label>
+              <Slider
+                value={[selectedLinkForEdit.thickness || 1]}
+                onValueChange={(value) => {
+                  const newThickness = value[0];
+                  setGraphData(prev => ({...prev, links: prev.links.map(l => {
+                    const lSourceId = typeof l.source === 'object' ? l.source.id : l.source;
+                    const lTargetId = typeof l.target === 'object' ? l.target.id : l.target;
+                    const sSourceId = typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source;
+                    const sTargetId = typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target;
+                    return (lSourceId === sSourceId && lTargetId === sTargetId) ? { ...l, thickness: newThickness } : l;
+                  })}));
+                  setSelectedLinkForEdit(prev => ({ ...prev, thickness: newThickness }));
+                }}
+                min={0.1} max={10} step={0.1} className="w-full"
+              />
             </div>
           </div>
         </FloatablePanel>
