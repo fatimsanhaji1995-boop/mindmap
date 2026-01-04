@@ -1366,12 +1366,12 @@ function App() {
         </FloatablePanel>
       )}
       {/* Master Toggle Menu */}
-      <div className="absolute top-8 left-1/2 -translate-x-1/2 z-50 flex gap-8 bg-white/95 backdrop-blur-lg p-8 rounded-full shadow-2xl border border-gray-300">
-        <Button className="text-2xl px-10 py-5 h-auto" variant={showFileOps ? "default" : "outline"} onClick={() => setShowFileOps(prev => !prev)}>Files</Button>
-        <Button className="text-2xl px-10 py-5 h-auto" variant={showAddNode ? "default" : "outline"} onClick={() => setShowAddNode(prev => !prev)}>+ Node</Button>
-        <Button className="text-2xl px-10 py-5 h-auto" variant={showDeleteNode ? "default" : "outline"} onClick={() => setShowDeleteNode(prev => !prev)}>- Node</Button>
-        <Button className="text-2xl px-10 py-5 h-auto" variant={showAddLink ? "default" : "outline"} onClick={() => setShowAddLink(prev => !prev)}>Link</Button>
-        <Button className="text-2xl px-10 py-5 h-auto" variant={showQuickActions ? "default" : "outline"} onClick={() => setShowQuickActions(prev => !prev)}>Actions</Button>
+      <div className="absolute top-8 left-1/2 -translate-x-1/2 z-50 flex gap-6 bg-white/95 backdrop-blur-lg p-8 rounded-full shadow-2xl border border-gray-300">
+        <Button className="text-2xl px-8 py-5 h-auto" variant={showFileOps ? "default" : "outline"} onClick={() => setShowFileOps(prev => !prev)}>Files</Button>
+        <Button className="text-2xl px-8 py-5 h-auto" variant={showAddNode ? "default" : "outline"} onClick={() => setShowAddNode(prev => !prev)}>+ Node</Button>
+        <Button className="text-2xl px-8 py-5 h-auto" variant={showDeleteNode ? "default" : "outline"} onClick={() => setShowDeleteNode(prev => !prev)}>- Node</Button>
+        <Button className="text-2xl px-8 py-5 h-auto" variant={showAddLink ? "default" : "outline"} onClick={() => setShowAddLink(prev => !prev)}>Link</Button>
+        <Button className="text-2xl px-8 py-5 h-auto" variant={showQuickActions ? "default" : "outline"} onClick={() => setShowQuickActions(prev => !prev)}>Actions</Button>
       </div>
     </div>
   );
