@@ -1,0 +1,298 @@
+/* FileLoader Styles */
+
+.file-loader {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Dropzone */
+.file-loader-dropzone {
+  position: relative;
+  border: 2px dashed hsl(var(--border));
+  border-radius: 0.5rem;
+  padding: 2rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: hsl(var(--muted) / 0.3);
+  overflow: hidden;
+}
+
+.file-loader-dropzone:hover {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.05);
+}
+
+.file-loader-dropzone.drag-over {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.1);
+  transform: scale(1.02);
+}
+
+.file-loader-dropzone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.file-loader-icon {
+  color: hsl(var(--muted-foreground));
+  transition: color 0.2s ease;
+}
+
+.file-loader-dropzone:hover .file-loader-icon {
+  color: hsl(var(--primary));
+}
+
+.file-loader-dropzone.drag-over .file-loader-icon {
+  color: hsl(var(--primary));
+  animation: bounce 0.5s ease infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.file-loader-dropzone-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  margin: 0;
+}
+
+.file-loader-dropzone-subtext {
+  font-size: 0.8125rem;
+  color: hsl(var(--muted-foreground));
+  margin: 0;
+}
+
+.file-loader-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* File Info */
+.file-loader-info {
+  padding: 0.75rem;
+  background: hsl(var(--muted));
+  border-radius: 0.375rem;
+  border: 1px solid hsl(var(--border));
+}
+
+.file-loader-info-header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.file-loader-info-icon {
+  color: hsl(var(--primary));
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.file-loader-info-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-loader-info-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  margin: 0;
+  word-break: break-word;
+}
+
+.file-loader-info-size {
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+  margin: 0.25rem 0 0 0;
+}
+
+/* Status Message */
+.file-loader-status {
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  border-left: 4px solid hsl(var(--border));
+  background: hsl(var(--muted) / 0.5);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.file-loader-status.success {
+  border-left-color: hsl(142 71% 45%);
+  background: hsl(142 71% 45% / 0.1);
+}
+
+.file-loader-status.error {
+  border-left-color: hsl(0 84% 60%);
+  background: hsl(0 84% 60% / 0.1);
+}
+
+.file-loader-status.loading {
+  border-left-color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.1);
+}
+
+.file-loader-status-content {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.file-loader-status-icon {
+  flex-shrink: 0;
+}
+
+.file-loader-status.success .file-loader-status-icon {
+  color: hsl(142 71% 45%);
+}
+
+.file-loader-status.error .file-loader-status-icon {
+  color: hsl(0 84% 60%);
+}
+
+.file-loader-status.loading .file-loader-status-icon {
+  color: hsl(var(--primary));
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.file-loader-status-message {
+  font-size: 0.875rem;
+  color: hsl(var(--foreground));
+  margin: 0;
+}
+
+/* Action Buttons */
+.file-loader-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.file-loader-actions button {
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+/* Help Text */
+.file-loader-help {
+  padding: 0.75rem;
+  background: hsl(var(--muted) / 0.3);
+  border-radius: 0.375rem;
+  border: 1px solid hsl(var(--border));
+}
+
+.file-loader-help-text {
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+  margin: 0;
+}
+
+.file-loader-help-text:not(:last-child) {
+  margin-bottom: 0.25rem;
+}
+
+.file-loader-help-text strong {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .file-loader-dropzone {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .file-loader-dropzone-text {
+    font-size: 0.8125rem;
+  }
+
+  .file-loader-dropzone-subtext {
+    font-size: 0.75rem;
+  }
+
+  .file-loader-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .file-loader-info-header {
+    gap: 0.5rem;
+  }
+
+  .file-loader-info-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .file-loader-actions {
+    flex-direction: column;
+  }
+
+  .file-loader-actions button {
+    width: 100%;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .file-loader-dropzone {
+    background: hsl(var(--primary) / 0.05);
+  }
+
+  .file-loader-dropzone:hover {
+    background: hsl(var(--primary) / 0.08);
+  }
+
+  .file-loader-dropzone.drag-over {
+    background: hsl(var(--primary) / 0.15);
+  }
+
+  .file-loader-info {
+    background: hsl(var(--card));
+  }
+
+  .file-loader-help {
+    background: hsl(var(--card) / 0.5);
+  }
+}
+
+/* Accessibility improvements */
+.file-loader-dropzone:focus-within {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+.file-loader-input:focus-visible {
+  outline: none;
+}
