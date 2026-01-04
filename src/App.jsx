@@ -1194,7 +1194,7 @@ function App() {
           id="camera-controls-panel"
           title="Camera Controls"
           defaultPosition={{ x: window.innerWidth * 0.7, y: 450 }}
-          defaultSize={{ width: 300, height: 'auto' }}
+          defaultSize={{ width: 350, height: 'auto' }}
           onClose={() => setShowCameraControls(false)}
         >
           <div className="space-y-4">
@@ -1202,6 +1202,65 @@ function App() {
               <Button onClick={handleZoomOut} size="sm" className="w-full" variant="outline">
                 Reset to Default View
               </Button>
+              
+              <Separator className="my-2" />
+              
+              <div className="space-y-2">
+                <Label>Save Camera Bookmark</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    placeholder="Bookmark name" 
+                    value={bookmarkName}
+                    onChange={(e) => setBookmarkName(e.target.value)}
+                  />
+                  <Button onClick={saveCameraBookmark}>Save</Button>
+                </div>
+              </div>
+
+              <Separator className="my-2" />
+
+              <div className="space-y-2">
+                <Label>Load Bookmarks File</Label>
+                <Input 
+                  type="file" 
+                  accept=".json"
+                  onChange={(e) => setSelectedBookmarkFileForLoad(e.target.files[0])}
+                />
+                <Button onClick={handleLoadBookmarksFile} size="sm" className="w-full">
+                  Load Bookmarks
+                </Button>
+                <Button onClick={exportBookmarks} size="sm" className="w-full" variant="outline">
+                  Export All Bookmarks
+                </Button>
+              </div>
+
+              {cameraBookmarks.length > 0 && (
+                <>
+                  <Separator className="my-2" />
+                  <div className="space-y-2">
+                    <Label>Bookmarks List</Label>
+                    <div className="max-h-40 overflow-y-auto space-y-1 pr-2">
+                      {cameraBookmarks.map((bookmark, index) => (
+                        <div key={index} className="flex items-center justify-between bg-secondary/20 p-2 rounded text-sm">
+                          <span className="truncate flex-1 cursor-pointer hover:text-primary" onClick={() => applyCameraBookmark(bookmark)}>
+                            {bookmark.name}
+                          </span>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 text-destructive"
+                            onClick={() => {
+                              setCameraBookmarks(prev => prev.filter((_, i) => i !== index));
+                            }}
+                          >
+                            <X size={14} />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </FloatablePanel>
