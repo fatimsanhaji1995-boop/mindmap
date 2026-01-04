@@ -737,6 +737,46 @@ function App() {
     reader.readAsText(file);
   }, []);
 
+    const saveCameraBookmark = () => {
+    if (!bookmarkName.trim()) {
+      alert("Please enter a bookmark name");
+      return;
+    }
+    const { x, y, z } = fgRef.current.cameraPosition();
+    const newBookmark = {
+      name: bookmarkName,
+      position: { x, y, z },
+      lookAt: fgRef.current.controls().target
+    };
+    setCameraBookmarks(prev => [...prev, newBookmark]);
+    setBookmarkName("");
+  };
+
+  const handleLoadBookmarksFile = () => {
+    if (!selectedBookmarkFileForLoad) {
+      alert("Please select a bookmarks JSON file first");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const bookmarks = JSON.parse(e.target.result);
+        setCameraBookmarks(bookmarks);
+      } catch (err) {
+        alert("Error parsing bookmarks file");
+      }
+    };
+    reader.readAsText(selectedBookmarkFileForLoad);
+  };
+
+  const applyCameraBookmark = (bookmark) => {
+    fgRef.current.cameraPosition(
+      bookmark.position,
+      bookmark.lookAt,
+      2000
+    );
+  };
+
   const exportBookmarks = useCallback(() => {
     if (cameraBookmarks.length === 0) {
       alert("No bookmarks to export.");
