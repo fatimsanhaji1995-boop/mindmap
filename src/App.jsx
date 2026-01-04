@@ -21,6 +21,11 @@ function App() {
   const [showOGMode, setShowOGMode] = useState(false);
   const [recordedOGPositions, setRecordedOGPositions] = useState({ nodes: [], links: [] });
   const [showControls, setShowControls] = useState(true);
+  const [showFileOps, setShowFileOps] = useState(true);
+  const [showAddNode, setShowAddNode] = useState(true);
+  const [showDeleteNode, setShowDeleteNode] = useState(true);
+  const [showAddLink, setShowAddLink] = useState(true);
+  const [showQuickActions, setShowQuickActions] = useState(true);
   const [selectedFileForLoad, setSelectedFileForLoad] = useState(null);
   const [loadedFileName, setLoadedFileName] = useState("graphData.json");
   const [isFocusMode, setIsFocusMode] = useState(false); // New state for focus mode
@@ -783,22 +788,19 @@ function App() {
         backgroundColor="#000000"
       />
 
-{/* Controls Panel */}
-      {showControls && (
+{/* Modular Control Panels */}
+      {showFileOps && (
         <FloatablePanel
-          id="controls-panel"
-          title="3D Node Graph"
+          id="file-ops-panel"
+          title="File Operations"
           defaultPosition={{ x: 20, y: 20 }}
-          defaultSize={{ width: window.innerWidth * 0.3, height: 800 }}
-          minWidth={300}
-          minHeight={400}
-          isDraggable={true}
-          isResizable={true}
-          onClose={() => setShowControls(false)}
+          defaultSize={{ width: window.innerWidth * 0.2, height: 400 }}
+          minWidth={250}
+          minHeight={300}
+          onClose={() => setShowFileOps(false)}
         >
           <div className="space-y-4">
-              {/* File Operations */}
-              <div className="space-y-2">
+            <div className="space-y-2">
                 <Label>Load JSON File</Label>
                 <Input
                   type="file"
@@ -847,11 +849,22 @@ function App() {
                   New Graph
                 </Button>
               </div>
+          </div>
+        </FloatablePanel>
+      )}
 
-              <Separator />
-
-              {/* Add Node */}
-              <div className="space-y-2">
+      {showAddNode && (
+        <FloatablePanel
+          id="add-node-panel"
+          title="Add Node"
+          defaultPosition={{ x: 20, y: 440 }}
+          defaultSize={{ width: window.innerWidth * 0.2, height: 250 }}
+          minWidth={250}
+          minHeight={200}
+          onClose={() => setShowAddNode(false)}
+        >
+          <div className="space-y-4">
+            <div className="space-y-2">
                 <Label>Add Node</Label>
                 <Input
                   placeholder="Node ID"
@@ -884,12 +897,22 @@ function App() {
                   </div>
                 )}
               </div>
+          </div>
+        </FloatablePanel>
+      )}
 
-              <Separator />
-
-              {/* Delete Node */}
-              {graphData.nodes.length > 0 && (
-                <div className="space-y-2">
+      {showDeleteNode && (
+        <FloatablePanel
+          id="delete-node-panel"
+          title="Delete Node"
+          defaultPosition={{ x: 20, y: 710 }}
+          defaultSize={{ width: window.innerWidth * 0.2, height: 200 }}
+          minWidth={250}
+          minHeight={150}
+          onClose={() => setShowDeleteNode(false)}
+        >
+          <div className="space-y-4">
+            <div className="space-y-2">
                   <Label>Delete Node</Label>
                   <Select
                     value={selectedNodeForEdit?.id || ''}
@@ -927,12 +950,22 @@ function App() {
                     Delete Node
                   </Button>
                 </div>
-              )}
+          </div>
+        </FloatablePanel>
+      )}
 
-              {graphData.nodes.length > 0 && <Separator />}
-
-              {/* Add Link */}
-              <div className="space-y-2">
+      {showAddLink && (
+        <FloatablePanel
+          id="add-link-panel"
+          title="Create Link"
+          defaultPosition={{ x: window.innerWidth * 0.2 + 40, y: 20 }}
+          defaultSize={{ width: window.innerWidth * 0.2, height: 450 }}
+          minWidth={250}
+          minHeight={350}
+          onClose={() => setShowAddLink(false)}
+        >
+          <div className="space-y-4">
+            <div className="space-y-2">
                 <Label>Create Link Between Nodes</Label>
                 {graphData.nodes.length < 2 ? (
                   <p className="text-sm text-muted-foreground">Need at least 2 nodes to create a link</p>
@@ -1045,11 +1078,22 @@ function App() {
                   </>
                 )}
               </div>
+          </div>
+        </FloatablePanel>
+      )}
 
-              <Separator />
-
-              {/* Focus Mode and Zoom Out Buttons */}
-              <div className="space-y-2">
+      {showQuickActions && (
+        <FloatablePanel
+          id="quick-actions-panel"
+          title="Quick Actions"
+          defaultPosition={{ x: window.innerWidth * 0.2 + 40, y: 490 }}
+          defaultSize={{ width: window.innerWidth * 0.2, height: 250 }}
+          minWidth={250}
+          minHeight={200}
+          onClose={() => setShowQuickActions(false)}
+        >
+          <div className="space-y-4">
+            <div className="space-y-2">
                 <Button
                   onClick={() => setIsFocusMode(prev => !prev)}
                   size="sm"
@@ -1061,12 +1105,7 @@ function App() {
                 <Button onClick={handleZoomOut} size="sm" className="w-full" variant="outline">
                   Zoom Out
                 </Button>
-              </div>
-
-              <Separator />
-
-              {/* OG Mode and Camera Controls Toggle */}
-              <div className="space-y-2">
+                <Separator className="my-2" />
                 <Button onClick={() => setShowOGMode(prev => !prev)} size="sm" className="w-full">
                   {showOGMode ? "Hide OG Mode" : "Show OG Mode"}
                 </Button>
@@ -1074,14 +1113,7 @@ function App() {
                   {showCameraControls ? "Hide Camera Controls" : "Show Camera Controls"}
                 </Button>
               </div>
-
-              <Separator />
-
-              {/* Stats */}
-              <div className="text-sm text-muted-foreground">
-                Nodes: {graphData.nodes.length} | Links: {graphData.links.length}
-              </div>
-            </div>
+          </div>
         </FloatablePanel>
       )}
 
@@ -1607,6 +1639,15 @@ function App() {
           </Card>
         </div>
       )}
+
+      {/* Master Toggle Menu */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-lg border border-gray-200">
+        <Button size="sm" variant={showFileOps ? "default" : "outline"} onClick={() => setShowFileOps(prev => !prev)}>Files</Button>
+        <Button size="sm" variant={showAddNode ? "default" : "outline"} onClick={() => setShowAddNode(prev => !prev)}>+ Node</Button>
+        <Button size="sm" variant={showDeleteNode ? "default" : "outline"} onClick={() => setShowDeleteNode(prev => !prev)}>- Node</Button>
+        <Button size="sm" variant={showAddLink ? "default" : "outline"} onClick={() => setShowAddLink(prev => !prev)}>Link</Button>
+        <Button size="sm" variant={showQuickActions ? "default" : "outline"} onClick={() => setShowQuickActions(prev => !prev)}>Actions</Button>
+      </div>
     </div>
   );
 }
