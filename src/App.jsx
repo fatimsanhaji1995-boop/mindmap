@@ -29,13 +29,15 @@ function App() {
 
   // Dynamic panel positioning logic
   const getPanelX = (panelId) => {
-    const panelOrder = ['file-ops', 'add-node', 'delete-node', 'add-link', 'quick-actions'];
+    const panelOrder = ['file-ops', 'add-node', 'delete-node', 'add-link', 'quick-actions', 'node-editor', 'link-editor'];
     const panelStates = {
       'file-ops': showFileOps,
       'add-node': showAddNode,
       'delete-node': showDeleteNode,
       'add-link': showAddLink,
-      'quick-actions': showQuickActions
+      'quick-actions': showQuickActions,
+      'node-editor': !!selectedNodeForEdit,
+      'link-editor': !!selectedLinkForEdit && !selectedNodeForEdit
     };
     
     let visibleCountBefore = 0;
@@ -1140,226 +1142,57 @@ function App() {
 
       {/* OG Mode Panel */}
       {showOGMode && (
-        <div className="absolute top-4 right-4 z-10 w-[21%] min-w-[140px] sm:w-64 max-h-[80vh] overflow-y-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                OG Mode
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowOGMode(false)}
-                >
-                  Hide
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Load OG.json File</Label>
-                <Input
-                  type="file"
-                  accept=".json"
-                  onChange={(e) => setSelectedFileForLoad(e.target.files[0])}
-                />
-                <Button onClick={handleLoadOGFile} size="sm" className="w-full">
-                  Load OG.json
-                </Button>
+        <FloatablePanel
+          id="og-mode-panel"
+          title="OG Mode"
+          defaultPosition={{ x: window.innerWidth * 0.7, y: 80 }}
+          defaultSize={{ width: 380, height: 'auto' }}
+          onClose={() => setShowOGMode(false)}
+        >
+          <div className="space-y-4">
+            {/* OG Mode Content */}
+            <div className="space-y-2">
+              <Label>Load OG.json File</Label>
+              <Input
+                type="file"
+                accept=".json"
+                onChange={(e) => setSelectedOGFileForLoad(e.target.files[0])}
+              />
+              <Button onClick={handleLoadOGFile} size="sm" className="w-full">
+                Load OG.json
+              </Button>
+              <Separator className="my-3" />
+              <Button onClick={recordOGPositions} size="sm" className="w-full">
+                Record OG Positions
+              </Button>
+              <Button onClick={saveOGData} size="sm" className="w-full">
+                Save OG.json
+              </Button>
+              <div className="text-xs text-muted-foreground mt-2">
+                Recorded OG Positions: {ogData.nodes.length} nodes, {ogData.links.length} links
               </div>
-              <Separator />
-              <div className="space-y-2">
-                <Button onClick={recordOGPositions} size="sm" className="w-full">
-                  Record OG Positions
-                </Button>
-                <Button onClick={saveOGPositions} size="sm" className="w-full">
-                  Save OG.json
-                </Button>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Recorded OG Positions: {recordedOGPositions.nodes.length} nodes, {recordedOGPositions.links.length} links
-              </div>
-              
-              <Separator />
-              
-              {/* Remaining Fund Section */}
-              <div className="space-y-2 pt-2">
-                <div className="bg-black border-red-600 border-2 rounded-lg p-2 sm:p-4">
-                  <h3 className="text-red-600 text-sm sm:text-xl font-bold mb-1 sm:mb-3">Remaining Fund</h3>
-                  <div className="space-y-1 sm:space-y-2">
-                    <div className="text-[10px] sm:text-sm text-muted-foreground">
-                      White Nodes: {graphData.nodes.filter(node => {
-                        const color = (node.color || '').toLowerCase();
-                        return color === '#ffffff' || color === '#fff' || color === 'white';
-                      }).length}
-                    </div>
-                    <Separator />
-                    <div className="text-lg sm:text-3xl font-bold text-red-600 text-center py-2 sm:py-4">
-                      {(graphData.nodes.filter(node => {
-                        const color = (node.color || '').toLowerCase();
-                        return color === '#ffffff' || color === '#fff' || color === 'white';
-                      }).length * 100).toLocaleString()} QAR
-                    </div>
-                    <div className="text-[8px] sm:text-xs text-muted-foreground text-center">
-                      The Amount
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </div>
+        </FloatablePanel>
       )}
 
       {/* Camera Controls Panel */}
       {showCameraControls && (
-        <div className="absolute bottom-4 left-4 z-10 w-[20%] min-w-[150px] sm:w-80 max-h-[80vh] overflow-y-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                Camera Controls
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowCameraControls(false)}
-                >
-                  Hide
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Preset Views */}
-              <div className="space-y-2">
-                <Label>Preset Views</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button onClick={() => setPresetView('top')} size="sm" variant="outline">
-                    Top
-                  </Button>
-                  <Button onClick={() => setPresetView('bottom')} size="sm" variant="outline">
-                    Bottom
-                  </Button>
-                  <Button onClick={() => setPresetView('front')} size="sm" variant="outline">
-                    Front
-                  </Button>
-                  <Button onClick={() => setPresetView('back')} size="sm" variant="outline">
-                    Back
-                  </Button>
-                  <Button onClick={() => setPresetView('left')} size="sm" variant="outline">
-                    Left
-                  </Button>
-                  <Button onClick={() => setPresetView('right')} size="sm" variant="outline">
-                    Right
-                  </Button>
-                  <Button onClick={() => setPresetView('isometric')} size="sm" variant="outline" className="col-span-2">
-                    Isometric
-                  </Button>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Auto-Rotate */}
-              <div className="space-y-2">
-                <Label>Auto-Rotate</Label>
-                <Button
-                  onClick={() => setAutoRotate(prev => !prev)}
-                  size="sm"
-                  className="w-full"
-                  variant={autoRotate ? "default" : "outline"}
-                >
-                  {autoRotate ? "Stop Rotation" : "Start Rotation"}
-                </Button>
-                {autoRotate && (
-                  <div className="space-y-2">
-                    <Label>Rotation Speed: {rotationSpeed}x</Label>
-                    <Slider
-                      value={[rotationSpeed]}
-                      onValueChange={(value) => setRotationSpeed(value[0])}
-                      min={0.1}
-                      max={5}
-                      step={0.1}
-                      className="w-full"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <Separator />
-
-              {/* Camera Bookmarks */}
-              <div className="space-y-2">
-                <Label>Camera Bookmarks</Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Bookmark name"
-                    value={bookmarkName}
-                    onChange={(e) => setBookmarkName(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button onClick={saveBookmark} size="sm">
-                    Save
-                  </Button>
-                </div>
-                <Button onClick={exportBookmarks} size="sm" className="w-full">
-                  Export Bookmarks
-                </Button>
-
-                <Separator className="my-3" />
-
-                <Label>Load Bookmarks File</Label>
-                <Input
-                  type="file"
-                  accept=".json"
-                  onChange={(e) => setSelectedBookmarkFileForLoad(e.target.files[0])}
-                />
-                <Button onClick={() => importBookmarks(selectedBookmarkFileForLoad)} size="sm" className="w-full">
-                  Load Bookmarks
-                </Button>
-                {selectedBookmarkFileForLoad && (
-                  <p className="text-xs text-muted-foreground">
-                    Selected: {selectedBookmarkFileForLoad.name}
-                  </p>
-                )}
-
-                {cameraBookmarks.length > 0 && (
-                  <div className="space-y-1 mt-2">
-                    {cameraBookmarks.map((bookmark, index) => (
-                      <div key={index} className="flex gap-2 items-center">
-                        <Button
-                          onClick={() => loadBookmark(bookmark)}
-                          size="sm"
-                          variant="outline"
-                          className="flex-1"
-                        >
-                          {bookmark.name}
-                        </Button>
-                        <Button
-                          onClick={() => deleteBookmark(index)}
-                          size="sm"
-                          variant="destructive"
-                        >
-                          ×
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {cameraBookmarks.length === 0 && (
-                  <p className="text-xs text-muted-foreground">No bookmarks saved</p>
-                )}
-              </div>
-
-              <Separator />
-
-              {/* Quick Actions */}
-              <div className="space-y-2">
-                <Label>Quick Actions</Label>
-                <Button onClick={handleZoomOut} size="sm" className="w-full" variant="outline">
-                  Reset to Default View
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <FloatablePanel
+          id="camera-controls-panel"
+          title="Camera Controls"
+          defaultPosition={{ x: window.innerWidth * 0.7, y: 450 }}
+          defaultSize={{ width: 380, height: 'auto' }}
+          onClose={() => setShowCameraControls(false)}
+        >
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Button onClick={handleZoomOut} size="sm" className="w-full" variant="outline">
+                Reset to Default View
+              </Button>
+            </div>
+          </div>
+        </FloatablePanel>
       )}
 
       {!showControls && (
@@ -1373,294 +1206,64 @@ function App() {
 
       {/* Property Editor Panel */}
       {selectedNodeForEdit && (
-        <div className="absolute bottom-4 right-4 z-10 w-[14%] min-w-[105px] sm:w-56 max-h-[80vh] overflow-y-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                Edit Node: {selectedNodeForEdit.id}
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleNextNode}
-                  >
-                    Next Node
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedNodeForEdit(null);
-                      setSelectedLinkForEdit(null);
-                    }}
-                  >
-                    Close
-                  </Button>
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Node Properties */}
-              <div className="space-y-3">
-                <div className="flex gap-2">
-                  <Button onClick={handleCopyNodeStyle} size="sm" variant="outline" className="flex-1">
-                    Copy Node Style
-                  </Button>
-                  <Button onClick={handleApplyNodeStyle} size="sm" variant="outline" className="flex-1" disabled={!copiedNodeStyle}>
-                    Apply Node Style
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  <Label>Node Color</Label>
-                  <div className="flex gap-2 items-center">
-                    <Input
-                      type="color"
-                      value={selectedNodeForEdit.color || '#1A75FF'}
-                      onChange={(e) => {
-                        const newColor = e.target.value;
-                        setGraphData(prev => ({
-                          ...prev,
-                          nodes: prev.nodes.map(n =>
-                            n.id === selectedNodeForEdit.id ? { ...n, color: newColor } : n
-                          )
-                        }));
-                        setSelectedNodeForEdit(prev => ({ ...prev, color: newColor }));
-                      }}
-                      className="w-20 h-10"
-                    />
-                    <span className="text-sm text-muted-foreground">{selectedNodeForEdit.color || '#1A75FF'}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Text Size: {selectedNodeForEdit.textSize || 6}</Label>
-                  <Slider
-                    value={[selectedNodeForEdit.textSize || 6]}
-                    onValueChange={(value) => {
-                      const newSize = value[0];
-                      setGraphData(prev => ({
-                        ...prev,
-                        nodes: prev.nodes.map(n =>
-                          n.id === selectedNodeForEdit.id ? { ...n, textSize: newSize } : n
-                        )
-                      }));
-                      setSelectedNodeForEdit(prev => ({ ...prev, textSize: newSize }));
-                    }}
-                    min={1}
-                    max={20}
-                    step={1}
-                    className="w-full"
-                  />
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Link Properties */}
-              <div className="space-y-3">
-                <Label>Connected Links</Label>
-                {(() => {
-                  const connectedLinks = graphData.links.filter(link => {
-                    const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-                    const targetId = typeof link.target === 'object' ? link.target.id : link.target;
-                    return sourceId === selectedNodeForEdit.id || targetId === selectedNodeForEdit.id;
-                  });
-
-                  if (connectedLinks.length === 0) {
-                    return <p className="text-sm text-muted-foreground">No connected links</p>;
-                  }
-
-                  return (
-                    <>
-                      <Select
-                        value={selectedLinkForEdit ? `${typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source}-${typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target}` : ''}
-                        onValueChange={(value) => {
-                          const link = connectedLinks.find(l => {
-                            const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-                            const targetId = typeof l.target === 'object' ? l.target.id : l.target;
-                            return `${sourceId}-${targetId}` === value;
-                          });
-                          setSelectedLinkForEdit(link);
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a link to edit" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {connectedLinks.map((link, index) => {
-                            const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-                            const targetId = typeof link.target === 'object' ? link.target.id : link.target;
-                            return (
-                              <SelectItem key={index} value={`${sourceId}-${targetId}`}>
-                                {sourceId} → {targetId}
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
-
-                      {selectedLinkForEdit && (
-                        <div className="space-y-3 mt-3">
-                          <div className="flex gap-2 mb-3">
-                            <Button onClick={handleCopyLinkStyle} size="sm" variant="outline" className="flex-1">
-                              Copy Link Style
-                            </Button>
-                            <Button onClick={handleApplyLinkStyle} size="sm" variant="outline" className="flex-1" disabled={!copiedLinkStyle}>
-                              Apply Link Style
-                            </Button>
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Link Color</Label>
-                            <div className="flex gap-2 items-center">
-                              <Input
-                                type="color"
-                                value={selectedLinkForEdit.color || '#F0F0F0'}
-                                onChange={(e) => {
-                                  const newColor = e.target.value;
-                                  setGraphData(prev => ({
-                                    ...prev,
-                                    links: prev.links.map(l => {
-                                      const lSourceId = typeof l.source === 'object' ? l.source.id : l.source;
-                                      const lTargetId = typeof l.target === 'object' ? l.target.id : l.target;
-                                      const sSourceId = typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source;
-                                      const sTargetId = typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target;
-                                      return (lSourceId === sSourceId && lTargetId === sTargetId)
-                                        ? { ...l, color: newColor }
-                                        : l;
-                                    })
-                                  }));
-                                  setSelectedLinkForEdit(prev => ({ ...prev, color: newColor }));
-                                }}
-                                className="w-20 h-10"
-                              />
-                              <span className="text-sm text-muted-foreground">{selectedLinkForEdit.color || '#F0F0F0'}</span>
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>Thickness: {selectedLinkForEdit.thickness || 1}</Label>
-                            <Slider
-                              value={[selectedLinkForEdit.thickness || 1]}
-                              onValueChange={(value) => {
-                                const newThickness = value[0];
-                                setGraphData(prev => ({
-                                  ...prev,
-                                  links: prev.links.map(l => {
-                                    const lSourceId = typeof l.source === 'object' ? l.source.id : l.source;
-                                    const lTargetId = typeof l.target === 'object' ? l.target.id : l.target;
-                                    const sSourceId = typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source;
-                                    const sTargetId = typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target;
-                                    return (lSourceId === sSourceId && lTargetId === sTargetId)
-                                      ? { ...l, thickness: newThickness }
-                                      : l;
-                                  })
-                                }));
-                                setSelectedLinkForEdit(prev => ({ ...prev, thickness: newThickness }));
-                              }}
-                              min={0.1}
-                              max={10}
-                              step={0.1}
-                              className="w-full"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <FloatablePanel
+          id="node-editor-panel"
+          title={`Edit Node: ${selectedNodeForEdit.id}`}
+          defaultPosition={{ x: getPanelX("node-editor"), y: 80 }}
+          defaultSize={{ width: 300, height: 'auto' }}
+          onClose={() => {
+            setSelectedNodeForEdit(null);
+            setSelectedLinkForEdit(null);
+          }}
+        >
+          <div className="space-y-4">
+            <Button onClick={handleNextNode} size="sm" variant="outline" className="w-full">Next Node</Button>
+            <div className="flex gap-2">
+              <Button onClick={handleCopyNodeStyle} size="sm" variant="outline" className="flex-1">Copy Style</Button>
+              <Button onClick={handleApplyNodeStyle} size="sm" variant="outline" className="flex-1" disabled={!copiedNodeStyle}>Apply Style</Button>
+            </div>
+            <div className="space-y-1">
+              <Label>Color</Label>
+              <Input type="color" value={selectedNodeForEdit.color || '#1A75FF'} onChange={(e) => {
+                const newColor = e.target.value;
+                setGraphData(prev => ({...prev, nodes: prev.nodes.map(n => n.id === selectedNodeForEdit.id ? { ...n, color: newColor } : n)}));
+                setSelectedNodeForEdit(prev => ({ ...prev, color: newColor }));
+              }} />
+            </div>
+          </div>
+        </FloatablePanel>
       )}
 
       {/* Link Property Editor Panel */}
       {selectedLinkForEdit && !selectedNodeForEdit && (
-        <div className="absolute bottom-4 right-4 z-10 w-80">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                Edit Link: {typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source} → {typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedLinkForEdit(null);
-                    setSelectedNodeForEdit(null);
-                  }}
-                >
-                  Close
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2 mb-3">
-                <Button onClick={handleCopyLinkStyle} size="sm" variant="outline" className="flex-1">
-                  Copy Link Style
-                </Button>
-                <Button onClick={handleApplyLinkStyle} size="sm" variant="outline" className="flex-1" disabled={!copiedLinkStyle}>
-                  Apply Link Style
-                </Button>
-              </div>
-              <div className="space-y-2">
-                <Label>Link Color</Label>
-                <div className="flex gap-2 items-center">
-                  <Input
-                    type="color"
-                    value={selectedLinkForEdit.color || '#F0F0F0'}
-                    onChange={(e) => {
-                      const newColor = e.target.value;
-                      setGraphData(prev => ({
-                        ...prev,
-                        links: prev.links.map(l => {
-                          const lSourceId = typeof l.source === 'object' ? l.source.id : l.source;
-                          const lTargetId = typeof l.target === 'object' ? l.target.id : l.target;
-                          const sSourceId = typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source;
-                          const sTargetId = typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target;
-                          return (lSourceId === sSourceId && lTargetId === sTargetId)
-                            ? { ...l, color: newColor }
-                            : l;
-                        })
-                      }));
-                      setSelectedLinkForEdit(prev => ({ ...prev, color: newColor }));
-                    }}
-                    className="w-20 h-10"
-                  />
-                  <span className="text-sm text-muted-foreground">{selectedLinkForEdit.color || '#F0F0F0'}</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Thickness: {selectedLinkForEdit.thickness || 1}</Label>
-                <Slider
-                  value={[selectedLinkForEdit.thickness || 1]}
-                  onValueChange={(value) => {
-                    const newThickness = value[0];
-                    setGraphData(prev => ({
-                      ...prev,
-                      links: prev.links.map(l => {
-                        const lSourceId = typeof l.source === 'object' ? l.source.id : l.source;
-                        const lTargetId = typeof l.target === 'object' ? l.target.id : l.target;
-                        const sSourceId = typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source;
-                        const sTargetId = typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target;
-                        return (lSourceId === sSourceId && lTargetId === sTargetId)
-                          ? { ...l, thickness: newThickness }
-                          : l;
-                      })
-                    }));
-                    setSelectedLinkForEdit(prev => ({ ...prev, thickness: newThickness }));
-                  }}
-                  min={0.1}
-                  max={10}
-                  step={0.1}
-                  className="w-full"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <FloatablePanel
+          id="link-editor-panel"
+          title="Edit Link"
+          defaultPosition={{ x: getPanelX("link-editor"), y: 80 }}
+          defaultSize={{ width: 300, height: 'auto' }}
+          onClose={() => setSelectedLinkForEdit(null)}
+        >
+          <div className="space-y-4">
+            <div className="text-sm font-medium">
+              {typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source} → {typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target}
+            </div>
+            <div className="space-y-1">
+              <Label>Color</Label>
+              <Input type="color" value={selectedLinkForEdit.color || '#F0F0F0'} onChange={(e) => {
+                const newColor = e.target.value;
+                setGraphData(prev => ({...prev, links: prev.links.map(l => {
+                  const lSourceId = typeof l.source === 'object' ? l.source.id : l.source;
+                  const lTargetId = typeof l.target === 'object' ? l.target.id : l.target;
+                  const sSourceId = typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source;
+                  const sTargetId = typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target;
+                  return (lSourceId === sSourceId && lTargetId === sTargetId) ? { ...l, color: newColor } : l;
+                })}));
+                setSelectedLinkForEdit(prev => ({ ...prev, color: newColor }));
+              }} />
+            </div>
+          </div>
+        </FloatablePanel>
       )}
-
       {/* Master Toggle Menu */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex gap-2 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-lg border border-gray-200">
         <Button size="sm" variant={showFileOps ? "default" : "outline"} onClick={() => setShowFileOps(prev => !prev)}>Files</Button>
