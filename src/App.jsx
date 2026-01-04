@@ -129,6 +129,18 @@ function App() {
     setSelectedFileForLoad(null);
   };
 
+    const saveOGData = () => {
+    const blob = new Blob([JSON.stringify(recordedOGPositions, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'OG.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleLoadOGFile = () => {
     if (!selectedFileForLoad) {
       alert("Please select an OG.json file first");
@@ -159,7 +171,7 @@ function App() {
           });
           return { ...prevGraphData, nodes: newNodes, links: ogData.links || [] };
         });
-        alert(`Loaded ${ogData.nodes.length} OG positions and ${ogData.links.length} links successfully!`);
+        alert(`Loaded ${recordedOGPositions.nodes.length} OG positions and ${recordedOGPositions.links.length} links successfully!`);
         setLoadedFileName(selectedFileForLoad.name.replace(".json", "-OG.json"));
         setSelectedFileForLoad(null);
       } catch (error) {
@@ -1156,7 +1168,7 @@ function App() {
               <Input
                 type="file"
                 accept=".json"
-                onChange={(e) => setSelectedOGFileForLoad(e.target.files[0])}
+                onChange={(e) => setSelectedFileForLoad(e.target.files[0])}
               />
               <Button onClick={handleLoadOGFile} size="sm" className="w-full">
                 Load OG.json
@@ -1169,7 +1181,7 @@ function App() {
                 Save OG.json
               </Button>
               <div className="text-xs text-muted-foreground mt-2">
-                Recorded OG Positions: {ogData.nodes.length} nodes, {ogData.links.length} links
+                Recorded OG Positions: {recordedOGPositions.nodes.length} nodes, {recordedOGPositions.links.length} links
               </div>
             </div>
           </div>
