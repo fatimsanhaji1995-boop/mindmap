@@ -829,7 +829,7 @@ function App() {
           id="file-ops-panel"
           title="File Operations"
           defaultPosition={{ x: getPanelX("file-ops"), y: 80 }}
-          defaultSize={{ width: window.innerWidth * 0.26, height: 'auto' }}
+          defaultSize={{ width: window.innerWidth * 0.18, height: 'auto' }}
           minWidth={250}
           minHeight={300}
           onClose={() => setShowFileOps(false)}
@@ -893,7 +893,7 @@ function App() {
           id="add-node-panel"
           title="Add Node"
           defaultPosition={{ x: getPanelX("add-node"), y: 80 }}
-          defaultSize={{ width: window.innerWidth * 0.26, height: 'auto' }}
+          defaultSize={{ width: window.innerWidth * 0.18, height: 'auto' }}
           minWidth={250}
           minHeight={200}
           onClose={() => setShowAddNode(false)}
@@ -941,7 +941,7 @@ function App() {
           id="delete-node-panel"
           title="Delete Node"
           defaultPosition={{ x: getPanelX("delete-node"), y: 80 }}
-          defaultSize={{ width: window.innerWidth * 0.26, height: 'auto' }}
+          defaultSize={{ width: window.innerWidth * 0.18, height: 'auto' }}
           minWidth={250}
           minHeight={150}
           onClose={() => setShowDeleteNode(false)}
@@ -994,7 +994,7 @@ function App() {
           id="add-link-panel"
           title="Create Link"
           defaultPosition={{ x: getPanelX("add-link"), y: 80 }}
-          defaultSize={{ width: window.innerWidth * 0.26, height: 'auto' }}
+          defaultSize={{ width: window.innerWidth * 0.18, height: 'auto' }}
           minWidth={250}
           minHeight={350}
           onClose={() => setShowAddLink(false)}
@@ -1122,7 +1122,7 @@ function App() {
           id="quick-actions-panel"
           title="Quick Actions"
           defaultPosition={{ x: getPanelX("quick-actions"), y: 80 }}
-          defaultSize={{ width: window.innerWidth * 0.26, height: 'auto' }}
+          defaultSize={{ width: window.innerWidth * 0.18, height: 'auto' }}
           minWidth={250}
           minHeight={200}
           onClose={() => setShowQuickActions(false)}
@@ -1158,7 +1158,7 @@ function App() {
           id="og-mode-panel"
           title="OG Mode"
           defaultPosition={{ x: window.innerWidth * 0.7, y: 80 }}
-          defaultSize={{ width: 400, height: 'auto' }}
+          defaultSize={{ width: 280, height: 'auto' }}
           onClose={() => setShowOGMode(false)}
         >
           <div className="space-y-4">
@@ -1194,7 +1194,7 @@ function App() {
           id="camera-controls-panel"
           title="Camera Controls"
           defaultPosition={{ x: window.innerWidth * 0.7, y: 450 }}
-          defaultSize={{ width: 450, height: 'auto' }}
+          defaultSize={{ width: 315, height: 'auto' }}
           onClose={() => setShowCameraControls(false)}
         >
           <div className="space-y-4">
@@ -1281,7 +1281,7 @@ function App() {
           id="node-editor-panel"
           title={`Edit Node: ${selectedNodeForEdit.id}`}
           defaultPosition={{ x: getPanelX("node-editor"), y: 80 }}
-          defaultSize={{ width: 400, height: 'auto' }}
+          defaultSize={{ width: 280, height: 'auto' }}
           onClose={() => {
             setSelectedNodeForEdit(null);
             setSelectedLinkForEdit(null);
@@ -1323,7 +1323,7 @@ function App() {
           id="link-editor-panel"
           title="Edit Link"
           defaultPosition={{ x: getPanelX("link-editor"), y: 80 }}
-          defaultSize={{ width: 400, height: 'auto' }}
+          defaultSize={{ width: 280, height: 'auto' }}
           onClose={() => setSelectedLinkForEdit(null)}
         >
           <div className="space-y-4">
@@ -1367,11 +1367,11 @@ function App() {
       )}
       {/* Master Toggle Menu */}
       <div className="absolute top-5 left-1/2 -translate-x-1/2 z-50 flex gap-4 bg-white/95 backdrop-blur-lg p-5 rounded-full shadow-2xl border border-gray-300">
-        <Button className="text-xl px-6 py-3 h-auto" variant={showFileOps ? "default" : "outline"} onClick={() => setShowFileOps(prev => !prev)}>Files</Button>
-        <Button className="text-xl px-6 py-3 h-auto" variant={showAddNode ? "default" : "outline"} onClick={() => setShowAddNode(prev => !prev)}>+ Node</Button>
-        <Button className="text-xl px-6 py-3 h-auto" variant={showDeleteNode ? "default" : "outline"} onClick={() => setShowDeleteNode(prev => !prev)}>- Node</Button>
-        <Button className="text-xl px-6 py-3 h-auto" variant={showAddLink ? "default" : "outline"} onClick={() => setShowAddLink(prev => !prev)}>Link</Button>
-        <Button className="text-xl px-6 py-3 h-auto" variant={showQuickActions ? "default" : "outline"} onClick={() => setShowQuickActions(prev => !prev)}>Actions</Button>
+        <Button className="text-base px-4 py-2 h-auto" variant={showFileOps ? "default" : "outline"} onClick={() => setShowFileOps(prev => !prev)}>Files</Button>
+        <Button className="text-base px-4 py-2 h-auto" variant={showAddNode ? "default" : "outline"} onClick={() => setShowAddNode(prev => !prev)}>+ Node</Button>
+        <Button className="text-base px-4 py-2 h-auto" variant={showDeleteNode ? "default" : "outline"} onClick={() => setShowDeleteNode(prev => !prev)}>- Node</Button>
+        <Button className="text-base px-4 py-2 h-auto" variant={showAddLink ? "default" : "outline"} onClick={() => setShowAddLink(prev => !prev)}>Link</Button>
+        <Button className="text-base px-4 py-2 h-auto" variant={showQuickActions ? "default" : "outline"} onClick={() => setShowQuickActions(prev => !prev)}>Actions</Button>
       </div>
     </div>
   );
