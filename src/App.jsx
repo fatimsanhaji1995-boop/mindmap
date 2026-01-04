@@ -793,8 +793,8 @@ function App() {
         <FloatablePanel
           id="file-ops-panel"
           title="File Operations"
-          defaultPosition={{ x: 20, y: 80 }}
-          defaultSize={{ width: window.innerWidth * 0.2, height: 400 }}
+          defaultPosition={{ x: 20, y: 70 }}
+          defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
           minWidth={250}
           minHeight={300}
           onClose={() => setShowFileOps(false)}
@@ -857,8 +857,8 @@ function App() {
         <FloatablePanel
           id="add-node-panel"
           title="Add Node"
-          defaultPosition={{ x: 20, y: 500 }}
-          defaultSize={{ width: window.innerWidth * 0.2, height: 250 }}
+          defaultPosition={{ x: 20, y: 400 }}
+          defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
           minWidth={250}
           minHeight={200}
           onClose={() => setShowAddNode(false)}
@@ -905,8 +905,8 @@ function App() {
         <FloatablePanel
           id="delete-node-panel"
           title="Delete Node"
-          defaultPosition={{ x: 20, y: 770 }}
-          defaultSize={{ width: window.innerWidth * 0.2, height: 200 }}
+          defaultPosition={{ x: 20, y: 600 }}
+          defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
           minWidth={250}
           minHeight={150}
           onClose={() => setShowDeleteNode(false)}
@@ -958,8 +958,8 @@ function App() {
         <FloatablePanel
           id="add-link-panel"
           title="Create Link"
-          defaultPosition={{ x: window.innerWidth * 0.2 + 40, y: 80 }}
-          defaultSize={{ width: window.innerWidth * 0.2, height: 450 }}
+          defaultPosition={{ x: window.innerWidth * 0.2 + 40, y: 70 }}
+          defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
           minWidth={250}
           minHeight={350}
           onClose={() => setShowAddLink(false)}
@@ -1086,8 +1086,8 @@ function App() {
         <FloatablePanel
           id="quick-actions-panel"
           title="Quick Actions"
-          defaultPosition={{ x: window.innerWidth * 0.2 + 40, y: 550 }}
-          defaultSize={{ width: window.innerWidth * 0.2, height: 250 }}
+          defaultPosition={{ x: window.innerWidth * 0.2 + 40, y: 450 }}
+          defaultSize={{ width: window.innerWidth * 0.2, height: 'auto' }}
           minWidth={250}
           minHeight={200}
           onClose={() => setShowQuickActions(false)}

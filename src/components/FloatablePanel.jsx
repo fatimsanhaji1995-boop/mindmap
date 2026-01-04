@@ -7,18 +7,6 @@ import './FloatablePanel.css';
 /**
  * FloatablePanel Component
  * A draggable and resizable panel that floats above other content
- * 
- * Props:
- * - id: unique identifier for the panel
- * - title: title displayed in the header
- * - children: content to display inside the panel
- * - onClose: callback when close button is clicked
- * - defaultPosition: { x, y } initial position
- * - defaultSize: { width, height } initial size
- * - minWidth: minimum width in pixels
- * - minHeight: minimum height in pixels
- * - isDraggable: whether the panel can be dragged (default: true)
- * - isResizable: whether the panel can be resized (default: true)
  */
 export const FloatablePanel = ({
   id = 'panel',
@@ -26,9 +14,9 @@ export const FloatablePanel = ({
   children,
   onClose,
   defaultPosition = { x: 20, y: 20 },
-  defaultSize = { width: 400, height: 500 },
-  minWidth = 300,
-  minHeight = 200,
+  defaultSize = { width: 400, height: 'auto' },
+  minWidth = 250,
+  minHeight = 100,
   isDraggable = true,
   isResizable = true,
   className = '',
@@ -86,11 +74,12 @@ export const FloatablePanel = ({
     e.stopPropagation();
 
     setIsResizing(true);
+    const rect = panelRef.current.getBoundingClientRect();
     setResizeStart({
       x: e.clientX,
       y: e.clientY,
-      width: size.width,
-      height: size.height,
+      width: rect.width,
+      height: rect.height,
     });
   };
 
@@ -131,6 +120,7 @@ export const FloatablePanel = ({
         top: position.y,
         width: size.width,
         height: size.height,
+        maxHeight: '90vh',
         zIndex: isDragging || isResizing ? 9999 : 100,
       }}
       initial={{ opacity: 0, scale: 0.9 }}
@@ -138,9 +128,7 @@ export const FloatablePanel = ({
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.2 }}
     >
-      {/* Panel Container */}
       <div className="floatable-panel-container">
-        {/* Header */}
         <div
           ref={headerRef}
           className="floatable-panel-header"
@@ -149,29 +137,25 @@ export const FloatablePanel = ({
         >
           <div className="floatable-panel-header-content">
             {isDraggable && (
-              <GripVertical className="floatable-panel-grip-icon" size={16} />
+              <GripVertical className="floatable-panel-grip-icon" size={14} />
             )}
             <h3 className="floatable-panel-title">{title}</h3>
           </div>
           {onClose && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={onClose}
               className="floatable-panel-close-btn"
               data-no-drag
             >
-              <X size={16} />
-            </Button>
+              Hide
+            </button>
           )}
         </div>
 
-        {/* Content */}
         <div className="floatable-panel-content">
           {children}
         </div>
 
-        {/* Resize Handle */}
         {isResizable && (
           <div
             className="floatable-panel-resize-handle"
