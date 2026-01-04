@@ -1158,7 +1158,7 @@ function App() {
           id="og-mode-panel"
           title="OG Mode"
           defaultPosition={{ x: window.innerWidth * 0.7, y: 80 }}
-          defaultSize={{ width: 380, height: 'auto' }}
+          defaultSize={{ width: 300, height: 'auto' }}
           onClose={() => setShowOGMode(false)}
         >
           <div className="space-y-4">
@@ -1194,7 +1194,7 @@ function App() {
           id="camera-controls-panel"
           title="Camera Controls"
           defaultPosition={{ x: window.innerWidth * 0.7, y: 450 }}
-          defaultSize={{ width: 380, height: 'auto' }}
+          defaultSize={{ width: 300, height: 'auto' }}
           onClose={() => setShowCameraControls(false)}
         >
           <div className="space-y-4">
