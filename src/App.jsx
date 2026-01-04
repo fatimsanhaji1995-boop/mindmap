@@ -1307,12 +1307,12 @@ function App() {
         </FloatablePanel>
       )}
       {/* Master Toggle Menu */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex gap-3 bg-white/80 backdrop-blur-sm p-3 rounded-full shadow-xl border border-gray-200">
-        <Button size="default" variant={showFileOps ? "default" : "outline"} onClick={() => setShowFileOps(prev => !prev)}>Files</Button>
-        <Button size="default" variant={showAddNode ? "default" : "outline"} onClick={() => setShowAddNode(prev => !prev)}>+ Node</Button>
-        <Button size="default" variant={showDeleteNode ? "default" : "outline"} onClick={() => setShowDeleteNode(prev => !prev)}>- Node</Button>
-        <Button size="default" variant={showAddLink ? "default" : "outline"} onClick={() => setShowAddLink(prev => !prev)}>Link</Button>
-        <Button size="default" variant={showQuickActions ? "default" : "outline"} onClick={() => setShowQuickActions(prev => !prev)}>Actions</Button>
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 flex gap-5 bg-white/90 backdrop-blur-md p-5 rounded-full shadow-2xl border border-gray-200">
+        <Button className="text-lg px-6 py-3 h-auto" variant={showFileOps ? "default" : "outline"} onClick={() => setShowFileOps(prev => !prev)}>Files</Button>
+        <Button className="text-lg px-6 py-3 h-auto" variant={showAddNode ? "default" : "outline"} onClick={() => setShowAddNode(prev => !prev)}>+ Node</Button>
+        <Button className="text-lg px-6 py-3 h-auto" variant={showDeleteNode ? "default" : "outline"} onClick={() => setShowDeleteNode(prev => !prev)}>- Node</Button>
+        <Button className="text-lg px-6 py-3 h-auto" variant={showAddLink ? "default" : "outline"} onClick={() => setShowAddLink(prev => !prev)}>Link</Button>
+        <Button className="text-lg px-6 py-3 h-auto" variant={showQuickActions ? "default" : "outline"} onClick={() => setShowQuickActions(prev => !prev)}>Actions</Button>
       </div>
     </div>
   );

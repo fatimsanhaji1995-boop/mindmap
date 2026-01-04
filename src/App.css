@@ -208,3 +208,26 @@
   color: #111827 !important;
   max-width: 100% !important;
 }
+
+.floatable-panel button:not(.floatable-panel-close-btn) {
+  font-size: 1.1rem !important;
+  padding: 0.75rem 1.25rem !important;
+  height: auto !important;
+}
+
+.floatable-panel label {
+  font-size: 1.1rem !important;
+  margin-bottom: 0.5rem !important;
+  display: block;
+}
+
+.floatable-panel input, .floatable-panel select {
+  font-size: 1.1rem !important;
+  padding: 0.6rem !important;
+  height: auto !important;
+}
+
+/* Ensure Radix UI / Shadcn UI Select content is on top */
+[data-radix-popper-content-wrapper] {
+  z-index: 10000 !important;
+}
