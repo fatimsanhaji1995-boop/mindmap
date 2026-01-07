@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
 import { Slider } from '@/components/ui/slider.jsx';
 import FloatablePanel from '@/components/FloatablePanel.jsx';
+import { getDescendants, filterGraphByCollapsedNodes, toggleNodeCollapse, isNodeCollapsed } from '@/lib/collapseUtils';
 import './App.css';
 
 function App() {
@@ -59,6 +60,8 @@ function App() {
   const [copiedLinkStyle, setCopiedLinkStyle] = useState(null); // State to store copied link style
   const [pullDistance, setPullDistance] = useState(50); // Percentage to pull node closer (0-100%)
   const [selectedNodeToPull, setSelectedNodeToPull] = useState(null); // Node to pull closer to selected node
+  const [collapsedNodes, setCollapsedNodes] = useState(new Set()); // Track collapsed nodes for branch hiding
+  const [collapseMode, setCollapseMode] = useState(false); // Toggle mode for collapse/expand
   
   // Camera control states
   const [showCameraControls, setShowCameraControls] = useState(false);
@@ -561,7 +564,15 @@ function App() {
     }
   }, [selectedLinkForEdit, copiedLinkStyle]);
 
-  const handleNodeClick = useCallback(node => {
+  const handleNodeClick = useCallback((node, event) => {
+    // Check if Ctrl+Click (or Cmd+Click on Mac) for collapse/expand
+    if ((event && (event.ctrlKey || event.metaKey)) || collapseMode) {
+      // Toggle collapse state for this node
+      const newCollapsed = toggleNodeCollapse(node.id, collapsedNodes);
+      setCollapsedNodes(newCollapsed);
+      return;
+    }
+    
     if (isFocusMode) {
       // Focus on the clicked node
       const distance = 40;
@@ -595,7 +606,7 @@ function App() {
       setSelectedNodeForEdit(node);
       setSelectedLinkForEdit(null); // Reset selected link
     }
-  }, [isFocusMode, isLinkSelectionMode]);
+  }, [isFocusMode, isLinkSelectionMode, collapseMode, collapsedNodes]);
 
   const handleLinkClick = useCallback(link => {
     setSelectedLinkForEdit(link);
@@ -825,11 +836,14 @@ function App() {
     return () => clearInterval(autoRotateRef.current);
   }, [autoRotate, rotationSpeed]);
 
+  // Filter graph data based on collapsed nodes
+  const displayGraphData = filterGraphByCollapsedNodes(graphData, collapsedNodes);
+
   return (
     <div className="relative h-screen w-screen bg-black text-white">
       <ForceGraph3D
         ref={graphRef}
-        graphData={graphData}
+        graphData={displayGraphData}
         nodeLabel="id"
         nodeAutoColorBy="group"
         nodeThreeObject={node => {
@@ -1187,6 +1201,18 @@ function App() {
                 <Button onClick={() => setShowCameraControls(prev => !prev)} size="sm" className="w-full" variant="outline">
                   {showCameraControls ? "Hide Camera Controls" : "Show Camera Controls"}
                 </Button>
+                <Separator className="my-2" />
+                <Button
+                  onClick={() => setCollapseMode(prev => !prev)}
+                  size="sm"
+                  className="w-full"
+                  variant={collapseMode ? "default" : "outline"}
+                >
+                  {collapseMode ? "Collapse Mode: ON" : "Collapse Mode: OFF"}
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Collapsed branches: {collapsedNodes.size}
+                </p>
               </div>
           </div>
         </FloatablePanel>
