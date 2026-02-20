@@ -70,7 +70,28 @@ function App() {
   const [cameraBookmarks, setCameraBookmarks] = useState([]);
   const [bookmarkName, setBookmarkName] = useState('');
   const [selectedBookmarkFileForLoad, setSelectedBookmarkFileForLoad] = useState(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [graphId, setGraphId] = useState('default-graph');
+  const [isSavingCloud, setIsSavingCloud] = useState(false);
+  const [isLoadingCloud, setIsLoadingCloud] = useState(false);
   const autoRotateRef = useRef(null);
+
+  const normalizeGraphData = useCallback((data) => ({
+    nodes: (data.nodes || []).map(node => ({
+      ...node,
+      color: node.color || '#1A75FF',
+      textSize: node.textSize || 6,
+    })),
+    links: (data.links || []).map(link => ({
+      ...link,
+      source: typeof link.source === 'object' ? link.source.id : link.source,
+      target: typeof link.target === 'object' ? link.target.id : link.target,
+      color: link.color || '#F0F0F0',
+      thickness: link.thickness || 1,
+    })),
+  }), []);
 
   // Sample data for testing
   useEffect(() => {
@@ -88,6 +109,136 @@ function App() {
     setGraphData(sampleData);
   }, []);
 
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      return;
+    }
+
+    const checkSession = async () => {
+      try {
+        const response = await fetch('/api/auth/me', { credentials: 'include' });
+        if (!response.ok) {
+          setCurrentUser(null);
+          return;
+        }
+        const payload = await response.json();
+        setCurrentUser(payload.user);
+      } catch {
+        setCurrentUser(null);
+      }
+    };
+
+    checkSession();
+  }, []);
+
+  const getCleanGraphData = useCallback(() => ({
+    nodes: graphData.nodes.map(({ id, color, textSize, group, x, y, z }) => ({
+      id, color, textSize, group, x, y, z,
+    })),
+    links: graphData.links.map(({ source, target, color, thickness }) => ({
+      source: typeof source === 'object' ? source.id : source,
+      target: typeof target === 'object' ? target.id : target,
+      color,
+      thickness,
+    })),
+  }), [graphData]);
+
+  const handleAuth = async (mode) => {
+    if (!email || !password) {
+      alert('Please enter both email and password.');
+      return;
+    }
+
+    const response = await fetch(`/api/auth/${mode}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      alert(payload.error || `Failed to ${mode}.`);
+      return;
+    }
+
+    setCurrentUser(payload.user);
+    setPassword('');
+    alert(`${mode === 'login' ? 'Logged in' : 'Registered'} as ${payload.user.email}`);
+  };
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    setCurrentUser(null);
+    setPassword('');
+  };
+
+  const saveGraphToCloud = async () => {
+    if (!currentUser) {
+      alert('Please login first.');
+      return;
+    }
+    if (!graphId.trim()) {
+      alert('Please enter a graph id.');
+      return;
+    }
+
+    setIsSavingCloud(true);
+    try {
+      const response = await fetch(`/api/graphs/${encodeURIComponent(graphId.trim())}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ data: getCleanGraphData() }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        alert(payload.error || 'Failed to save graph to cloud.');
+        return;
+      }
+
+      alert(`Graph saved to cloud: ${payload.graph.id}`);
+    } catch {
+      alert('Network error while saving graph.');
+    } finally {
+      setIsSavingCloud(false);
+    }
+  };
+
+  const loadGraphFromCloud = async () => {
+    if (!currentUser) {
+      alert('Please login first.');
+      return;
+    }
+    if (!graphId.trim()) {
+      alert('Please enter a graph id.');
+      return;
+    }
+
+    setIsLoadingCloud(true);
+    try {
+      const response = await fetch(`/api/graphs/${encodeURIComponent(graphId.trim())}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        alert(payload.error || 'Failed to load graph from cloud.');
+        return;
+      }
+
+      const normalized = normalizeGraphData(payload.graph.data);
+      setGraphData(normalized);
+      setLoadedFileName(`${graphId.trim()}.json`);
+      alert(`Loaded graph ${payload.graph.id} from cloud.`);
+    } catch {
+      alert('Network error while loading graph.');
+    } finally {
+      setIsLoadingCloud(false);
+    }
+  };
+
   const handleLoadFile = () => {
     if (!selectedFileForLoad) {
       alert('Please select a JSON file first');
@@ -99,24 +250,9 @@ function App() {
       try {
         const data = JSON.parse(e.target.result);
 
-        // Normalize nodes
-        const nodes = data.nodes.map(node => ({
-          ...node,
-          color: node.color || '#1A75FF',
-          textSize: node.textSize || 6,
-        }));
-
-        // Normalize links
-        const links = data.links.map(link => ({
-          ...link,
-          source: typeof link.source === 'object' ? link.source.id : link.source,
-          target: typeof link.target === 'object' ? link.target.id : link.target,
-          color: link.color || '#F0F0F0',
-          thickness: link.thickness || 1,
-        }));
-
-        setGraphData({ nodes, links });
-        alert(`Loaded ${nodes.length} nodes and ${links.length} links successfully!`);
+        const normalizedData = normalizeGraphData(data);
+        setGraphData(normalizedData);
+        alert(`Loaded ${normalizedData.nodes.length} nodes and ${normalizedData.links.length} links successfully!`);
         setLoadedFileName(selectedFileForLoad.name);
         setSelectedFileForLoad(null);
       } catch (error) {
@@ -391,16 +527,7 @@ function App() {
   };
 
   const saveGraphData = () => {
-    const cleanData = {
-      nodes: graphData.nodes.map(({ id, color, textSize, group, x, y, z }) => ({
-        id, color, textSize, group, x, y, z,
-      })),
-      links: graphData.links.map(({ source, target, color, thickness }) => ({
-        source: typeof source === 'object' ? source.id : source,
-        target: typeof target === 'object' ? target.id : target,
-        color, thickness,
-      })),
-    };
+    const cleanData = getCleanGraphData();
 
     const blob = new Blob([JSON.stringify(cleanData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -937,6 +1064,48 @@ function App() {
                 <Button onClick={handleNewGraph} variant="outline" size="sm" className="w-full">
                   New Graph
                 </Button>
+
+                <Separator className="my-3" />
+
+                <Label>Cloud Account</Label>
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+
+                {!currentUser ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button onClick={() => handleAuth('login')} size="sm">Login</Button>
+                    <Button onClick={() => handleAuth('register')} size="sm" variant="outline">Register</Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Signed in as {currentUser.email}</p>
+                    <Button onClick={handleLogout} size="sm" variant="outline" className="w-full">Logout</Button>
+                  </div>
+                )}
+
+                <Label>Cloud Graph ID</Label>
+                <Input
+                  type="text"
+                  placeholder="default-graph"
+                  value={graphId}
+                  onChange={(e) => setGraphId(e.target.value)}
+                />
+                <Button onClick={loadGraphFromCloud} size="sm" className="w-full" disabled={isLoadingCloud}>
+                  {isLoadingCloud ? 'Loading from Cloud...' : 'Load from Cloud'}
+                </Button>
+                <Button onClick={saveGraphToCloud} size="sm" className="w-full" disabled={isSavingCloud}>
+                  {isSavingCloud ? 'Saving to Cloud...' : 'Save to Cloud'}
+                </Button>
               </div>
           </div>
         </FloatablePanel>
@@ -1444,4 +1613,3 @@ function App() {
 }
 
 export default App;
-

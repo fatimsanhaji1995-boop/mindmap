@@ -1,79 +1,51 @@
 # 3D Node Graph Visualization
 
-A dynamic 3D node graph visualization built with React and Three.js that features **dynamic link positioning** - links automatically redraw and move along with nodes when they are repositioned.
+A dynamic 3D node graph visualization built with React and Three.js.
 
-## Key Features
+## Cloud Sync + Login (New)
 
-### Dynamic Link Positioning
-- **Links move with nodes**: When nodes are dragged or repositioned, links automatically redraw to maintain connections
-- **Real-time updates**: The `linkPositionUpdate` function ensures links are redrawn in real-time as nodes move
-- **No fixed positions**: Links are not based on fixed coordinates but dynamically calculated based on node positions
+This project now includes a backend API layer for Vercel functions with PostgreSQL storage and cookie-based auth.
 
-### Interactive Controls
-- Add new nodes with custom IDs
-- Drag nodes in 3D space
-- Load graph data from JSON files
-- Real-time node and link counting
+### API Endpoints
 
-### 3D Visualization
-- Full 3D navigation (rotate, zoom, pan)
-- Custom node colors and text sizes
-- Link labels showing connections
-- Responsive design
+- `POST /api/auth/register` - create account with email + password.
+- `POST /api/auth/login` - login with email + password.
+- `POST /api/auth/logout` - clear auth session cookie.
+- `GET /api/auth/me` - read current session user.
+- `GET /api/graphs/:id` - load a graph for logged-in user.
+- `POST /api/graphs/:id` - save/update a graph for logged-in user.
 
-## How Dynamic Link Positioning Works
+Each user has their own namespace for graph IDs (`id + user_id` composite key), so the same graph ID on different users remains isolated.
 
-The core functionality is implemented through the `linkPositionUpdate` callback in the ForceGraph3D component:
+### Environment Variables
 
-```javascript
-linkPositionUpdate={(threeObject, { start, end }) => {
-  // Update the line geometry - this redraws links when nodes move
-  const positions = threeObject.geometry.attributes.position.array;
-  positions[0] = start.x;
-  positions[1] = start.y;
-  positions[2] = start.z;
-  positions[3] = end.x;
-  positions[4] = end.y;
-  positions[5] = end.z;
-  threeObject.geometry.attributes.position.needsUpdate = true;
+Add these in Vercel project settings (or local `.env`):
 
-  // Update text sprite position
-  const sprite = threeObject.children[0];
-  if (sprite) {
-    const middlePos = {
-      x: start.x + (end.x - start.x) / 2,
-      y: start.y + (end.y - start.y) / 2,
-      z: start.z + (end.z - start.z) / 2
-    };
-    Object.assign(sprite.position, middlePos);
-  }
-}}
+- `DATABASE_URL` - Postgres connection string (Vercel Postgres / Neon / Supabase).
+- `JWT_SECRET` - long random secret for signing auth tokens.
+
+### Database Setup
+
+Run the schema in `db/schema.sql` against your Postgres database.
+
+### Frontend usage
+
+In **File Operations** panel:
+
+1. Register or login with email + password.
+2. Enter a `Cloud Graph ID` (for example `default-graph`).
+3. Click **Save to Cloud** or **Load from Cloud**.
+
+This replaces manual cross-device JSON transfer for the main graph workflow.
+
+## Local Development
+
+```bash
+npm install
+npm run dev -- --host
 ```
 
-This function is called automatically whenever nodes move, ensuring that:
-1. Link geometry is updated with new start/end positions
-2. Link text labels are repositioned to the midpoint
-3. All changes are applied in real-time
-
-## Usage
-
-1. **Start the development server**:
-   ```bash
-   npm run dev -- --host
-   ```
-
-2. **Add nodes**: Use the control panel to add new nodes with custom IDs
-
-3. **Load JSON data**: Use the file input to load graph data from JSON files
-
-4. **Interact with the graph**: 
-   - Drag nodes to see links move dynamically
-   - Rotate the view by dragging in empty space
-   - Zoom with mouse wheel
-
-## JSON Format
-
-The application accepts JSON files with the following structure:
+## JSON Shape
 
 ```json
 {
@@ -98,18 +70,3 @@ The application accepts JSON files with the following structure:
   ]
 }
 ```
-
-## Sample Data
-
-A sample JSON file (`sample-graph.json`) is included to demonstrate the functionality.
-
-## Technical Implementation
-
-- **React**: Component-based UI
-- **react-force-graph-3d**: 3D graph visualization
-- **Three.js**: 3D graphics rendering
-- **shadcn/ui**: Modern UI components
-- **Tailwind CSS**: Styling
-
-The key innovation is the dynamic link positioning system that ensures links are always correctly positioned relative to their connected nodes, regardless of how the nodes are moved or repositioned in 3D space.
-
