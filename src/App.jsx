@@ -51,7 +51,6 @@ function App() {
   };
 
   const [selectedFileForLoad, setSelectedFileForLoad] = useState(null);
-  const [loadedFileName, setLoadedFileName] = useState("graphData.json");
   const [isFocusMode, setIsFocusMode] = useState(false); // New state for focus mode
   const [isLinkSelectionMode, setIsLinkSelectionMode] = useState(false); // Mode for selecting nodes to create links
   const [selectedNodeForEdit, setSelectedNodeForEdit] = useState(null); // Node selected for property editing
@@ -230,7 +229,6 @@ function App() {
 
       const normalized = normalizeGraphData(payload.graph.data);
       setGraphData(normalized);
-      setLoadedFileName(`${graphId.trim()}.json`);
       alert(`Loaded graph ${payload.graph.id} from cloud.`);
     } catch {
       alert('Network error while loading graph.');
@@ -253,7 +251,6 @@ function App() {
         const normalizedData = normalizeGraphData(data);
         setGraphData(normalizedData);
         alert(`Loaded ${normalizedData.nodes.length} nodes and ${normalizedData.links.length} links successfully!`);
-        setLoadedFileName(selectedFileForLoad.name);
         setSelectedFileForLoad(null);
       } catch (error) {
         console.error('Error parsing JSON file:', error);
@@ -311,7 +308,6 @@ function App() {
           return { ...prevGraphData, nodes: newNodes, links: ogData.links || [] };
         });
         alert(`Loaded ${recordedOGPositions.nodes.length} OG positions and ${recordedOGPositions.links.length} links successfully!`);
-        setLoadedFileName(selectedFileForLoad.name.replace(".json", "-OG.json"));
         setSelectedFileForLoad(null);
       } catch (error) {
         console.error("Error parsing OG.json file:", error);
@@ -524,34 +520,6 @@ function App() {
     setSelectedNodes(prev => prev.filter(id => id !== nodeId));
 
     alert(`Node ${nodeId} and its connected links have been deleted successfully!`);
-  };
-
-  const saveGraphData = () => {
-    const cleanData = getCleanGraphData();
-
-    const blob = new Blob([JSON.stringify(cleanData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = loadedFileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    // Save OG-suffixed JSON if OG mode is active and there are recorded positions
-    if (showOGMode && recordedOGPositions.nodes.length > 0) {
-      const ogBlob = new Blob([JSON.stringify(recordedOGPositions, null, 2)], { type: 'application/json' });
-      const ogUrl = URL.createObjectURL(ogBlob);
-      const ogLink = document.createElement('a');
-      ogLink.href = ogUrl;
-      const ogFileName = loadedFileName.replace('.json', '-OG.json');
-      ogLink.download = ogFileName;
-      document.body.appendChild(ogLink);
-      ogLink.click();
-      document.body.removeChild(ogLink);
-      URL.revokeObjectURL(ogUrl);
-    }
   };
 
   const recordOGPositions = () => {
@@ -1032,35 +1000,6 @@ function App() {
                   </p>
                 )}
                 
-                <Separator className="my-3" />
-                
-                <Label>Save Filename</Label>
-                <Input
-                  type="text"
-                  placeholder="Enter filename"
-                  value={loadedFileName}
-                  onChange={(e) => {
-                    let value = e.target.value;
-                    // Ensure .json extension
-                    if (value && !value.endsWith('.json')) {
-                      value = value.replace(/\.[^.]*$/, '') + '.json';
-                    }
-                    setLoadedFileName(value || 'graphData.json');
-                  }}
-                  onBlur={(e) => {
-                    // Add .json if missing when user leaves the field
-                    let value = e.target.value.trim();
-                    if (value && !value.endsWith('.json')) {
-                      setLoadedFileName(value + '.json');
-                    } else if (!value) {
-                      setLoadedFileName('graphData.json');
-                    }
-                  }}
-                />
-                <Button onClick={saveGraphData} size="sm" className="w-full">
-                  Save JSON
-                </Button>
-                
                 <Button onClick={handleNewGraph} variant="outline" size="sm" className="w-full">
                   New Graph
                 </Button>
@@ -1101,10 +1040,10 @@ function App() {
                   onChange={(e) => setGraphId(e.target.value)}
                 />
                 <Button onClick={loadGraphFromCloud} size="sm" className="w-full" disabled={isLoadingCloud}>
-                  {isLoadingCloud ? 'Loading from Cloud...' : 'Load from Cloud'}
+                  {isLoadingCloud ? 'Loading from Vercel DB...' : 'Load from Vercel DB'}
                 </Button>
                 <Button onClick={saveGraphToCloud} size="sm" className="w-full" disabled={isSavingCloud}>
-                  {isSavingCloud ? 'Saving to Cloud...' : 'Save to Cloud'}
+                  {isSavingCloud ? 'Saving to Vercel DB...' : 'Save to Vercel DB'}
                 </Button>
               </div>
           </div>
