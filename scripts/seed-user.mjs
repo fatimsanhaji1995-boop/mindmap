@@ -7,11 +7,27 @@ function getArg(name) {
   return arg ? arg.slice(prefix.length) : '';
 }
 
+function getConnectionString() {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  if (process.env.POSTGRES_URL) return process.env.POSTGRES_URL;
+
+  const host = process.env.PGHOST || process.env.POSTGRES_HOST;
+  const user = process.env.PGUSER || process.env.POSTGRES_USER;
+  const password = process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD;
+  const database = process.env.PGDATABASE || process.env.POSTGRES_DATABASE;
+
+  if (!host || !user || !password || !database) return '';
+
+  const sslmode = process.env.PGSSLMODE || 'require';
+  return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}/${database}?sslmode=${sslmode}`;
+}
+
 const email = (getArg('email') || '').trim().toLowerCase();
 const password = getArg('password') || '';
+const connectionString = getConnectionString();
 
-if (!process.env.DATABASE_URL) {
-  console.error('DATABASE_URL is required.');
+if (!connectionString) {
+  console.error('DATABASE_URL (or POSTGRES_URL / PG* variables) is required.');
   process.exit(1);
 }
 
@@ -26,8 +42,8 @@ if (password.length < 6) {
 }
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false },
+  connectionString,
+  ssl: connectionString.includes('localhost') ? false : { rejectUnauthorized: false },
 });
 
 const createUsersTableSql = `

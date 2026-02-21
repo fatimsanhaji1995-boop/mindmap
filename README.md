@@ -36,7 +36,14 @@ If you want to pre-create or reset a login user in Postgres, run:
 DATABASE_URL="your_connection_string" npm run seed:user -- --email=user@example.com --password=123123qw
 ```
 
-This will create the `users` table if needed and upsert the user by email.
+The script accepts any of these env setups:
+
+- `DATABASE_URL`
+- `POSTGRES_URL`
+- Raw `PG*` / `POSTGRES_*` parts (`PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, etc.)
+
+This will create the `users` table if needed and upsert the user by email.  
+If your database name is `neondb`, set `PGDATABASE=neondb` (or use a URL that ends with `/neondb`).
 
 ### Frontend usage
 
