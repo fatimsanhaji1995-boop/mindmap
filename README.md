@@ -28,6 +28,16 @@ Add these in Vercel project settings (or local `.env`):
 
 Run the schema in `db/schema.sql` against your Postgres database.
 
+### Seed a user manually (optional)
+
+If you want to pre-create or reset a login user in Postgres, run:
+
+```bash
+DATABASE_URL="your_connection_string" npm run seed:user -- --email=user@example.com --password=123123qw
+```
+
+This will create the `users` table if needed and upsert the user by email.
+
 ### Frontend usage
 
 In **File Operations** panel:
