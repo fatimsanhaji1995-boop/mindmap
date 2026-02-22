@@ -41,7 +41,7 @@ Requirements:
 - The script uses `process.env.DATABASE_URL` only.
 - `DATABASE_URL` must be the pooled Neon connection string (it must contain `-pooler`).
 
-This will create the `users` table if needed and upsert the user by email.
+This will create the `users` table if needed and upsert the user by email using your pooled Neon `DATABASE_URL`.
 
 ### Frontend usage
 

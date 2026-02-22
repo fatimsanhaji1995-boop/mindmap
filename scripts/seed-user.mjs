@@ -64,9 +64,9 @@ try {
     [email, passwordHash],
   );
 
-  console.log(`Seeded user ${result.rows[0].email} (id=${result.rows[0].id}).`);
-} catch (error) {
-  console.error('Failed to seed user:', error.message);
+  console.log('User seeded successfully.');
+} catch {
+  console.error('Failed to seed user.');
   process.exitCode = 1;
 } finally {
   await pool.end();
