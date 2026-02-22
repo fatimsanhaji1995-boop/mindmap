@@ -1749,45 +1749,37 @@ function App() {
           </div>
         </FloatablePanel>
       )}
-      {showConsole && (
-        <FloatablePanel
-          id="console-panel"
-          title="Console"
-          defaultPosition={{ x: 20, y: window.innerHeight - 320 }}
-          defaultSize={{ width: 400, height: 300 }}
-          onClose={() => setShowConsole(false)}
-          className="!bg-zinc-900 !border-zinc-700 !text-zinc-100"
-        >
-          <div className="flex h-full flex-col text-xs font-mono">
-            <div className="mb-2 border-b border-zinc-800 pb-2 text-zinc-400">
-              Active graph: {graphId}
-            </div>
-            <div className="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
-              {consoleLines.map((line, idx) => (
-                <div key={idx} className="whitespace-pre-wrap break-all text-zinc-300">
-                  {line}
-                </div>
-              ))}
-            </div>
-            <div className="mt-2 flex gap-2 border-t border-zinc-800 pt-3">
-              <input
-                type="text"
-                className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-2 py-1.5 text-zinc-100 outline-none focus:border-zinc-600 transition-colors"
-                placeholder="Type command..."
-                value={consoleInput}
-                onChange={(e) => setConsoleInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && submitConsoleCommand()}
-              />
-              <button
-                onClick={submitConsoleCommand}
-                className="bg-zinc-800 border border-zinc-700 rounded px-4 py-1.5 hover:bg-zinc-700 active:bg-zinc-600 transition-colors"
-              >
-                Run
-              </button>
-            </div>
-          </div>
-        </FloatablePanel>
-      )}
+      <div
+        className={`absolute top-0 left-4 z-[70] w-[620px] max-w-[calc(100vw-2rem)] border border-zinc-500/80 bg-zinc-900/30 text-zinc-100 shadow-2xl backdrop-blur-sm transition-all duration-300 ${showConsole ? 'translate-y-4 opacity-100 pointer-events-auto' : '-translate-y-full opacity-0 pointer-events-none'}`}
+      >
+        <div className="flex items-center justify-between border-b border-zinc-600/80 px-3 py-2">
+          <p className="text-sm font-semibold tracking-wide">Console</p>
+          <button className="text-zinc-300 hover:text-zinc-100" onClick={() => setShowConsole(false)}>×</button>
+        </div>
+        <div className="flex items-center justify-between px-3 py-2 text-xs text-zinc-300">
+          <span>Active graph: <span className="text-zinc-100">{graphId}</span></span>
+          <span className="text-zinc-400">Press <kbd className="rounded border border-zinc-500 px-1">Tab</kbd> to toggle</span>
+        </div>
+        <div className="h-56 overflow-y-auto border-y border-zinc-600/80 bg-black/30 px-3 py-2 font-mono text-xs leading-5 custom-scrollbar">
+          {consoleLines.map((line, idx) => (
+            <div key={`${line}-${idx}`} className="whitespace-pre-wrap break-all text-zinc-300">{line}</div>
+          ))}
+        </div>
+        <div className="flex gap-2 px-3 py-3">
+          <input
+            className="flex-1 border border-zinc-600 bg-black/30 px-2 py-1 font-mono text-xs text-zinc-100 outline-none focus:border-zinc-300"
+            placeholder="Type command..."
+            value={consoleInput}
+            onChange={(e) => setConsoleInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                submitConsoleCommand();
+              }
+            }}
+          />
+          <button className="border border-zinc-600 bg-zinc-800/60 px-3 text-xs hover:bg-zinc-700/70" onClick={submitConsoleCommand}>Run</button>
+        </div>
+      </div>
 
       {/* Master Toggle Menu */}
       <div className="absolute top-5 left-1/2 -translate-x-1/2 z-50 flex max-w-[95vw] flex-col items-center gap-2">
