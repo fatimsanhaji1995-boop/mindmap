@@ -228,18 +228,6 @@ function App() {
     checkSession();
   }, []);
 
-  const getCleanGraphData = useCallback(() => ({
-    nodes: graphData.nodes.map(({ id, color, textSize, group, x, y, z }) => ({
-      id, color, textSize, group, x, y, z,
-    })),
-    links: graphData.links.map(({ source, target, color, thickness }) => ({
-      source: typeof source === 'object' ? source.id : source,
-      target: typeof target === 'object' ? target.id : target,
-      color,
-      thickness,
-    })),
-  }), [graphData]);
-
   const validateAuthInputs = () => {
     if (!email || !password) {
       alert('Please enter both email and password.');
@@ -283,7 +271,6 @@ function App() {
       credentials: 'include',
       body: JSON.stringify({ email, password }),
     });
-  }, [groupNames]);
 
     if (response.status === 409) {
       alert('Email already exists. Please log in instead.');
