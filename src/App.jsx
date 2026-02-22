@@ -69,9 +69,6 @@ function App() {
   const [cameraBookmarks, setCameraBookmarks] = useState([]);
   const [bookmarkName, setBookmarkName] = useState('');
   const [selectedBookmarkFileForLoad, setSelectedBookmarkFileForLoad] = useState(null);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [currentUser, setCurrentUser] = useState(null);
   const [graphId, setGraphId] = useState('default-graph');
   const [isSavingCloud, setIsSavingCloud] = useState(false);
   const [isLoadingCloud, setIsLoadingCloud] = useState(false);
@@ -108,75 +105,7 @@ function App() {
     setGraphData(sampleData);
   }, []);
 
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      return;
-    }
-
-    const checkSession = async () => {
-      try {
-        const response = await fetch('/api/auth/me', { credentials: 'include' });
-        if (!response.ok) {
-          setCurrentUser(null);
-          return;
-        }
-        const payload = await response.json();
-        setCurrentUser(payload.user);
-      } catch {
-        setCurrentUser(null);
-      }
-    };
-
-    checkSession();
-  }, []);
-
-  const getCleanGraphData = useCallback(() => ({
-    nodes: graphData.nodes.map(({ id, color, textSize, group, x, y, z }) => ({
-      id, color, textSize, group, x, y, z,
-    })),
-    links: graphData.links.map(({ source, target, color, thickness }) => ({
-      source: typeof source === 'object' ? source.id : source,
-      target: typeof target === 'object' ? target.id : target,
-      color,
-      thickness,
-    })),
-  }), [graphData]);
-
-  const handleAuth = async (mode) => {
-    if (!email || !password) {
-      alert('Please enter both email and password.');
-      return;
-    }
-
-    const response = await fetch(`/api/auth/${mode}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ email, password }),
-    });
-
-    const payload = await response.json();
-    if (!response.ok) {
-      alert(payload.error || `Failed to ${mode}.`);
-      return;
-    }
-
-    setCurrentUser(payload.user);
-    setPassword('');
-    alert(`${mode === 'login' ? 'Logged in' : 'Registered'} as ${payload.user.email}`);
-  };
-
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-    setCurrentUser(null);
-    setPassword('');
-  };
-
   const saveGraphToCloud = async () => {
-    if (!currentUser) {
-      alert('Please login first.');
-      return;
-    }
     if (!graphId.trim()) {
       alert('Please enter a graph id.');
       return;
@@ -206,10 +135,6 @@ function App() {
   };
 
   const loadGraphFromCloud = async () => {
-    if (!currentUser) {
-      alert('Please login first.');
-      return;
-    }
     if (!graphId.trim()) {
       alert('Please enter a graph id.');
       return;
@@ -1006,31 +931,10 @@ function App() {
 
                 <Separator className="my-3" />
 
-                <Label>Cloud Account</Label>
-                <Input
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-                <Input
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-
-                {!currentUser ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button onClick={() => handleAuth('login')} size="sm">Login</Button>
-                    <Button onClick={() => handleAuth('register')} size="sm" variant="outline">Register</Button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">Signed in as {currentUser.email}</p>
-                    <Button onClick={handleLogout} size="sm" variant="outline" className="w-full">Logout</Button>
-                  </div>
-                )}
+                <Label>Cloud Storage</Label>
+                <p className="text-xs text-muted-foreground">
+                  Single-user mode is enabled. Graphs save directly to the database.
+                </p>
 
                 <Label>Cloud Graph ID</Label>
                 <Input
