@@ -252,3 +252,42 @@
 .floatable-panel label {
   width: 100% !important;
 }
+
+/* Floatable Panel Dark Mode Overrides for Console */
+.floatable-panel.\!bg-zinc-900,
+.floatable-panel.\!bg-zinc-900 .floatable-panel-header,
+.floatable-panel.\!bg-zinc-900 .floatable-panel-content {
+  background-color: #18181b !important; /* zinc-900 */
+  color: #f4f4f5 !important; /* zinc-100 */
+  border-color: #3f3f46 !important; /* zinc-700 */
+}
+
+.floatable-panel.\!bg-zinc-900 .floatable-panel-title {
+  color: #f4f4f5 !important;
+}
+
+.floatable-panel.\!bg-zinc-900 .floatable-panel-close-btn {
+  background-color: #27272a !important; /* zinc-800 */
+  color: #d4d4d8 !important; /* zinc-300 */
+}
+
+.floatable-panel.\!bg-zinc-900 .floatable-panel-close-btn:hover {
+  background-color: #3f3f46 !important; /* zinc-700 */
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
