@@ -3,15 +3,27 @@ import { Pool } from 'pg';
 
 let pool;
 
-export function getDb() {
-  if (!process.env.DATABASE_URL) {
+function getDatabaseUrl() {
+  const databaseUrl = process.env.DATABASE_URL;
+
+  if (!databaseUrl) {
     throw new Error('DATABASE_URL is not configured.');
   }
 
+  if (!databaseUrl.includes('-pooler')) {
+    throw new Error('DATABASE_URL must use the Neon pooled connection string (contains "-pooler").');
+  }
+
+  return databaseUrl;
+}
+
+export function getDb() {
+  const databaseUrl = getDatabaseUrl();
+
   if (!pool) {
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false },
+      connectionString: databaseUrl,
+      ssl: { rejectUnauthorized: false },
     });
   }
 

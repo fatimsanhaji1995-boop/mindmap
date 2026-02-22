@@ -28,6 +28,21 @@ Add these in Vercel project settings (or local `.env`):
 
 Run the schema in `db/schema.sql` against your Postgres database.
 
+### Seed a user manually (optional)
+
+If you want to pre-create or reset a login user in Postgres, run:
+
+```bash
+DATABASE_URL="postgresql://...-pooler..." npm run seed:user -- --email=user@example.com --password=123123qw
+```
+
+Requirements:
+
+- The script uses `process.env.DATABASE_URL` only.
+- `DATABASE_URL` must be the pooled Neon connection string (it must contain `-pooler`).
+
+This will create the `users` table if needed and upsert the user by email.
+
 ### Frontend usage
 
 In **File Operations** panel:
