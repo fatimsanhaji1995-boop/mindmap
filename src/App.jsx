@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
 import { Slider } from '@/components/ui/slider.jsx';
 import FloatablePanel from '@/components/FloatablePanel.jsx';
+import RegistrationForm from '@/components/RegistrationForm.jsx';
 import { getDescendants, filterGraphByCollapsedNodes, toggleNodeCollapse, isNodeCollapsed } from '@/lib/collapseUtils';
 import './App.css';
 
@@ -69,6 +70,12 @@ function App() {
   const [cameraBookmarks, setCameraBookmarks] = useState([]);
   const [bookmarkName, setBookmarkName] = useState('');
   const [selectedBookmarkFileForLoad, setSelectedBookmarkFileForLoad] = useState(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authMessage, setAuthMessage] = useState('');
+  const [authMessageType, setAuthMessageType] = useState('');
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [graphId, setGraphId] = useState('default-graph');
   const [isSavingCloud, setIsSavingCloud] = useState(false);
   const [isLoadingCloud, setIsLoadingCloud] = useState(false);
@@ -104,6 +111,110 @@ function App() {
     };
     setGraphData(sampleData);
   }, []);
+
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      return;
+    }
+
+    const checkSession = async () => {
+      try {
+        const response = await fetch('/api/auth/me', { credentials: 'include' });
+        if (!response.ok) {
+          setCurrentUser(null);
+          return;
+        }
+        const payload = await response.json();
+        setCurrentUser(payload.user);
+        setAuthMessage(`Signed in as ${payload.user.email}`);
+        setAuthMessageType('success');
+      } catch {
+        setCurrentUser(null);
+      }
+    };
+
+    checkSession();
+  }, []);
+
+  const getCleanGraphData = useCallback(() => ({
+    nodes: graphData.nodes.map(({ id, color, textSize, group, x, y, z }) => ({
+      id, color, textSize, group, x, y, z,
+    })),
+    links: graphData.links.map(({ source, target, color, thickness }) => ({
+      source: typeof source === 'object' ? source.id : source,
+      target: typeof target === 'object' ? target.id : target,
+      color,
+      thickness,
+    })),
+  }), [graphData]);
+
+  const validateAuthInputs = () => {
+    if (!email || !password) {
+      alert('Please enter both email and password.');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleLogin = async () => {
+    if (!validateAuthInputs()) {
+      return;
+    }
+
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      alert(payload.error || 'Failed to login.');
+      return;
+    }
+
+    setCurrentUser(payload.user);
+    setPassword('');
+    alert(`Logged in as ${payload.user.email}`);
+  };
+
+  const handleRegister = async () => {
+    if (!validateAuthInputs()) {
+      return;
+    }
+
+    const response = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (response.status === 409) {
+      alert('Email already exists. Please log in instead.');
+      return;
+    }
+
+    const payload = await response.json();
+    if (!response.ok) {
+      alert(payload.error || 'Failed to register.');
+      return;
+    }
+
+    setCurrentUser(payload.user);
+    setPassword('');
+    window.location.assign('/dashboard');
+  };
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    setCurrentUser(null);
+    setPassword('');
+    setAuthMessage('Logged out.');
+    setAuthMessageType('info');
+  };
 
   const saveGraphToCloud = async () => {
     if (!graphId.trim()) {
@@ -931,10 +1042,38 @@ function App() {
 
                 <Separator className="my-3" />
 
-                <Label>Cloud Storage</Label>
+                <Label>Cloud Account</Label>
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
                 <p className="text-xs text-muted-foreground">
-                  Single-user mode is enabled. Graphs save directly to the database.
+                  Use these same fields for both Register and Login. Register signs you in automatically.
                 </p>
+
+                {!currentUser ? (
+                  <div className="space-y-3">
+                    <Button onClick={() => handleAuth('login')} size="sm" className="w-full">Login</Button>
+                    <RegistrationForm onRegistered={(user) => {
+                      setCurrentUser(user);
+                      setEmail(user?.email || '');
+                      setPassword('');
+                    }} />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Signed in as {currentUser.email}</p>
+                    <Button onClick={handleLogout} size="sm" variant="outline" className="w-full">Logout</Button>
+                  </div>
+                )}
 
                 <Label>Cloud Graph ID</Label>
                 <Input
