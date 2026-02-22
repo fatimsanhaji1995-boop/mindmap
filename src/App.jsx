@@ -26,11 +26,13 @@ function App() {
   const [showAddNode, setShowAddNode] = useState(false);
   const [showDeleteNode, setShowDeleteNode] = useState(false);
   const [showAddLink, setShowAddLink] = useState(false);
+  const [showFileOps, setShowFileOps] = useState(false);
 
   // Dynamic panel positioning logic
   const getPanelX = (panelId) => {
-    const panelOrder = ['add-node', 'delete-node', 'add-link', 'node-editor', 'link-editor'];
+    const panelOrder = ['file-ops', 'add-node', 'delete-node', 'add-link', 'node-editor', 'link-editor'];
     const panelStates = {
+      'file-ops': showFileOps,
       'add-node': showAddNode,
       'delete-node': showDeleteNode,
       'add-link': showAddLink,
@@ -63,7 +65,7 @@ function App() {
   const [autoRotate, setAutoRotate] = useState(false);
   const [rotationSpeed, setRotationSpeed] = useState(1);
   const [cameraBookmarks, setCameraBookmarks] = useState([]);
-  const [bookmarkName, setBookmarkName] = useState('');
+  const [cameraBookmarkName, setCameraBookmarkName] = useState('');
   const [selectedBookmarkFileForLoad, setSelectedBookmarkFileForLoad] = useState(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -138,6 +140,22 @@ function App() {
       }),
     };
   }, [graphData, hiddenGroups, getNodeGroupLabel]);
+
+  const toggleGroupVisibility = useCallback((groupName) => {
+    setHiddenGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupName)) {
+        next.delete(groupName);
+      } else {
+        next.add(groupName);
+      }
+      return next;
+    });
+  }, []);
+
+  const showAllGroups = useCallback(() => {
+    setHiddenGroups(new Set());
+  }, []);
 
   const normalizeOGSnapshot = useCallback((snapshot) => {
     if (!snapshot || typeof snapshot !== 'object') {
@@ -237,56 +255,48 @@ function App() {
     return true;
   };
 
-  const handleLogin = async () => {
+  const handleAuth = async (mode) => {
     if (!validateAuthInputs()) {
       return;
     }
 
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ email, password }),
-    });
+    setIsAuthLoading(true);
+    try {
+      const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      });
 
-    const payload = await response.json();
-    if (!response.ok) {
-      alert(payload.error || 'Failed to login.');
-      return;
+      if (mode === 'register' && response.status === 409) {
+        alert('Email already exists. Please log in instead.');
+        return;
+      }
+
+      const payload = await response.json();
+      if (!response.ok) {
+        alert(payload.error || `Failed to ${mode}.`);
+        return;
+      }
+
+      setCurrentUser(payload.user);
+      setPassword('');
+      alert(`${mode === 'login' ? 'Logged in' : 'Registered'} as ${payload.user.email}`);
+      
+      if (mode === 'register') {
+        window.location.assign('/dashboard');
+      }
+    } catch (error) {
+      alert(`Network error during ${mode}.`);
+    } finally {
+      setIsAuthLoading(false);
     }
-
-    setCurrentUser(payload.user);
-    setPassword('');
-    alert(`Logged in as ${payload.user.email}`);
   };
 
-  const handleRegister = async () => {
-    if (!validateAuthInputs()) {
-      return;
-    }
-
-    const response = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ email, password }),
-    });
-
-    if (response.status === 409) {
-      alert('Email already exists. Please log in instead.');
-      return;
-    }
-
-    const payload = await response.json();
-    if (!response.ok) {
-      alert(payload.error || 'Failed to register.');
-      return;
-    }
-
-    setCurrentUser(payload.user);
-    setPassword('');
-    window.location.assign('/dashboard');
-  };
+  const handleLogin = () => handleAuth('login');
+  const handleRegister = () => handleAuth('register');
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
@@ -296,7 +306,7 @@ function App() {
     setAuthMessageType('info');
   };
 
-  const saveGraphToCloud = async () => {
+  const saveGraphToCloud = async ({ silent = false } = {}) => {
     if (!graphId.trim()) {
       if (!silent) alert('Please enter a graph id.');
       return false;
@@ -333,7 +343,7 @@ function App() {
     }
   };
 
-  const loadGraphFromCloud = async () => {
+  const loadGraphFromCloud = async ({ silent = false } = {}) => {
     if (!graphId.trim()) {
       if (!silent) alert('Please enter a graph id.');
       return false;
@@ -1743,6 +1753,7 @@ function App() {
       <div className="absolute top-5 left-1/2 -translate-x-1/2 z-50 flex max-w-[95vw] flex-col items-center gap-2">
         <div className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-zinc-500/70 bg-zinc-900/70 p-3 shadow-2xl backdrop-blur-md">
         <Button className="text-base px-4 py-2 h-auto" variant={showConsole ? "default" : "outline"} onClick={() => setShowConsole(prev => !prev)}>Console</Button>
+        <Button className="text-base px-4 py-2 h-auto" variant={showFileOps ? "default" : "outline"} onClick={() => setShowFileOps(prev => !prev)}>Files</Button>
         <Button className="text-base px-4 py-2 h-auto" variant={showAddNode ? "default" : "outline"} onClick={() => setShowAddNode(prev => !prev)}>+ Node</Button>
         <Button className="text-base px-4 py-2 h-auto" variant={showDeleteNode ? "default" : "outline"} onClick={() => setShowDeleteNode(prev => !prev)}>- Node</Button>
         <Button className="text-base px-4 py-2 h-auto" variant={showAddLink ? "default" : "outline"} onClick={() => setShowAddLink(prev => !prev)}>Link</Button>
