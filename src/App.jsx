@@ -217,10 +217,6 @@ function App() {
   };
 
   const saveGraphToCloud = async () => {
-    if (!currentUser) {
-      alert('Please login first.');
-      return;
-    }
     if (!graphId.trim()) {
       alert('Please enter a graph id.');
       return;
@@ -250,10 +246,6 @@ function App() {
   };
 
   const loadGraphFromCloud = async () => {
-    if (!currentUser) {
-      alert('Please login first.');
-      return;
-    }
     if (!graphId.trim()) {
       alert('Please enter a graph id.');
       return;
