@@ -142,13 +142,21 @@ function App() {
     })),
   }), [graphData]);
 
-  const handleAuth = async (mode) => {
+  const validateAuthInputs = () => {
     if (!email || !password) {
       alert('Please enter both email and password.');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleLogin = async () => {
+    if (!validateAuthInputs()) {
       return;
     }
 
-    const response = await fetch(`/api/auth/${mode}`, {
+    const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -157,13 +165,41 @@ function App() {
 
     const payload = await response.json();
     if (!response.ok) {
-      alert(payload.error || `Failed to ${mode}.`);
+      alert(payload.error || 'Failed to login.');
       return;
     }
 
     setCurrentUser(payload.user);
     setPassword('');
-    alert(`${mode === 'login' ? 'Logged in' : 'Registered'} as ${payload.user.email}`);
+    alert(`Logged in as ${payload.user.email}`);
+  };
+
+  const handleRegister = async () => {
+    if (!validateAuthInputs()) {
+      return;
+    }
+
+    const response = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (response.status === 409) {
+      alert('Email already exists. Please log in instead.');
+      return;
+    }
+
+    const payload = await response.json();
+    if (!response.ok) {
+      alert(payload.error || 'Failed to register.');
+      return;
+    }
+
+    setCurrentUser(payload.user);
+    setPassword('');
+    window.location.assign('/dashboard');
   };
 
   const handleLogout = async () => {
@@ -1019,11 +1055,14 @@ function App() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Use these same fields for both Register and Login. Register signs you in automatically.
+                </p>
 
                 {!currentUser ? (
                   <div className="grid grid-cols-2 gap-2">
-                    <Button onClick={() => handleAuth('login')} size="sm">Login</Button>
-                    <Button onClick={() => handleAuth('register')} size="sm" variant="outline">Register</Button>
+                    <Button onClick={handleLogin} size="sm">Login</Button>
+                    <Button onClick={handleRegister} size="sm" variant="outline">Register</Button>
                   </div>
                 ) : (
                   <div className="space-y-2">
