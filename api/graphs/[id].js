@@ -7,6 +7,8 @@ const SINGLE_USER_PASSWORD_HASH = process.env.SINGLE_USER_PASSWORD_HASH || 'sing
 function normalizeGraph(payload) {
   const nodes = Array.isArray(payload?.nodes) ? payload.nodes : [];
   const links = Array.isArray(payload?.links) ? payload.links : [];
+  const ogSnapshot = normalizeOgSnapshot(payload?.ogSnapshot);
+  const cameraBookmarks = normalizeCameraBookmarks(payload?.cameraBookmarks);
 
   return {
     nodes: nodes.map(({ id, color, textSize, group, x, y, z }) => ({ id, color, textSize, group, x, y, z })),
@@ -16,6 +18,8 @@ function normalizeGraph(payload) {
       color,
       thickness,
     })),
+    ...(ogSnapshot ? { ogSnapshot } : {}),
+    ...(cameraBookmarks.length ? { cameraBookmarks } : {}),
   };
 }
 

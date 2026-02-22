@@ -1,5 +1,5 @@
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import ForceGraph3D from 'react-force-graph-3d';
 import SpriteText from 'three-spritetext';
 import * as THREE from 'three';
@@ -19,25 +19,21 @@ function App() {
   const graphRef = useRef();
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [newNodeId, setNewNodeId] = useState('');
+  const [newNodeGroup, setNewNodeGroup] = useState('general');
   const [selectedNodes, setSelectedNodes] = useState([]);
-  const [showOGMode, setShowOGMode] = useState(false);
   const [recordedOGPositions, setRecordedOGPositions] = useState({ nodes: [], links: [] });
   const [showControls, setShowControls] = useState(false);
-  const [showFileOps, setShowFileOps] = useState(false);
   const [showAddNode, setShowAddNode] = useState(false);
   const [showDeleteNode, setShowDeleteNode] = useState(false);
   const [showAddLink, setShowAddLink] = useState(false);
-  const [showQuickActions, setShowQuickActions] = useState(false);
 
   // Dynamic panel positioning logic
   const getPanelX = (panelId) => {
-    const panelOrder = ['file-ops', 'add-node', 'delete-node', 'add-link', 'quick-actions', 'node-editor', 'link-editor'];
+    const panelOrder = ['add-node', 'delete-node', 'add-link', 'node-editor', 'link-editor'];
     const panelStates = {
-      'file-ops': showFileOps,
       'add-node': showAddNode,
       'delete-node': showDeleteNode,
       'add-link': showAddLink,
-      'quick-actions': showQuickActions,
       'node-editor': !!selectedNodeForEdit,
       'link-editor': !!selectedLinkForEdit && !selectedNodeForEdit
     };
@@ -64,7 +60,6 @@ function App() {
   const [collapseMode, setCollapseMode] = useState(false); // Toggle mode for collapse/expand
   
   // Camera control states
-  const [showCameraControls, setShowCameraControls] = useState(false);
   const [autoRotate, setAutoRotate] = useState(false);
   const [rotationSpeed, setRotationSpeed] = useState(1);
   const [cameraBookmarks, setCameraBookmarks] = useState([]);
@@ -79,6 +74,13 @@ function App() {
   const [graphId, setGraphId] = useState('default-graph');
   const [isSavingCloud, setIsSavingCloud] = useState(false);
   const [isLoadingCloud, setIsLoadingCloud] = useState(false);
+  const [showConsole, setShowConsole] = useState(false);
+  const [consoleInput, setConsoleInput] = useState('');
+  const [consoleLines, setConsoleLines] = useState([
+    'MindMap Console initialized.',
+    'Type `help` to list commands.',
+  ]);
+  const [hiddenGroups, setHiddenGroups] = useState(new Set());
   const autoRotateRef = useRef(null);
 
   const normalizeGraphData = useCallback((data) => ({
@@ -95,6 +97,96 @@ function App() {
       thickness: link.thickness || 1,
     })),
   }), []);
+
+
+  const getCleanGraphData = useCallback(() => ({
+    nodes: graphData.nodes.map(({ id, color, textSize, group, x, y, z }) => ({
+      id, color, textSize, group, x, y, z,
+    })),
+    links: graphData.links.map(({ source, target, color, thickness }) => ({
+      source: typeof source === 'object' ? source.id : source,
+      target: typeof target === 'object' ? target.id : target,
+      color,
+      thickness,
+    })),
+  }), [graphData]);
+
+  const getNodeGroupLabel = useCallback((groupValue) => {
+    const normalized = typeof groupValue === 'string' ? groupValue.trim() : '';
+    return normalized || 'ungrouped';
+  }, []);
+
+  const groupNames = useMemo(() => {
+    const unique = new Set(graphData.nodes.map((node) => getNodeGroupLabel(node.group)));
+    return [...unique].sort((a, b) => a.localeCompare(b));
+  }, [graphData.nodes, getNodeGroupLabel]);
+
+  const visibleGraphData = useMemo(() => {
+    if (!hiddenGroups.size) {
+      return graphData;
+    }
+
+    const visibleNodes = graphData.nodes.filter((node) => !hiddenGroups.has(getNodeGroupLabel(node.group)));
+    const visibleNodeIds = new Set(visibleNodes.map((node) => node.id));
+
+    return {
+      nodes: visibleNodes,
+      links: graphData.links.filter((link) => {
+        const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+        const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+        return visibleNodeIds.has(sourceId) && visibleNodeIds.has(targetId);
+      }),
+    };
+  }, [graphData, hiddenGroups, getNodeGroupLabel]);
+
+  const normalizeOGSnapshot = useCallback((snapshot) => {
+    if (!snapshot || typeof snapshot !== 'object') {
+      return { nodes: [], links: [] };
+    }
+
+    const nodes = Array.isArray(snapshot.nodes) ? snapshot.nodes : [];
+    const links = Array.isArray(snapshot.links) ? snapshot.links : [];
+
+    return {
+      nodes: nodes.map(({ id, x, y, z }) => ({ id, x, y, z })),
+      links: links.map(({ source, target, color, thickness }) => ({
+        source: typeof source === 'object' ? source.id : source,
+        target: typeof target === 'object' ? target.id : target,
+        color,
+        thickness,
+      })),
+    };
+  }, []);
+
+  const normalizeCameraBookmarks = useCallback((bookmarks) => {
+    if (!Array.isArray(bookmarks)) {
+      return [];
+    }
+
+    return bookmarks
+      .filter((bookmark) => bookmark && typeof bookmark === 'object')
+      .map((bookmark, index) => ({
+        name: bookmark.name || `view-${index + 1}`,
+        position: {
+          x: bookmark.position?.x ?? 0,
+          y: bookmark.position?.y ?? 0,
+          z: bookmark.position?.z ?? 400,
+        },
+        lookAt: {
+          x: bookmark.lookAt?.x ?? 0,
+          y: bookmark.lookAt?.y ?? 0,
+          z: bookmark.lookAt?.z ?? 0,
+        },
+        up: {
+          x: bookmark.up?.x ?? 0,
+          y: bookmark.up?.y ?? 1,
+          z: bookmark.up?.z ?? 0,
+        },
+        zoom: bookmark.zoom ?? 1,
+        isOrthographic: Boolean(bookmark.isOrthographic),
+      }));
+  }, []);
+
 
   // Sample data for testing
   useEffect(() => {
@@ -191,6 +283,7 @@ function App() {
       credentials: 'include',
       body: JSON.stringify({ email, password }),
     });
+  }, [groupNames]);
 
     if (response.status === 409) {
       alert('Email already exists. Please log in instead.');
@@ -218,8 +311,8 @@ function App() {
 
   const saveGraphToCloud = async () => {
     if (!graphId.trim()) {
-      alert('Please enter a graph id.');
-      return;
+      if (!silent) alert('Please enter a graph id.');
+      return false;
     }
 
     setIsSavingCloud(true);
@@ -228,18 +321,26 @@ function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ data: getCleanGraphData() }),
+        body: JSON.stringify({
+          data: {
+            ...getCleanGraphData(),
+            ogSnapshot: normalizeOGSnapshot(recordedOGPositions),
+            cameraBookmarks: normalizeCameraBookmarks(cameraBookmarks),
+          },
+        }),
       });
 
       const payload = await response.json();
       if (!response.ok) {
-        alert(payload.error || 'Failed to save graph to cloud.');
-        return;
+        if (!silent) alert(payload.error || 'Failed to save graph to cloud.');
+        return false;
       }
 
-      alert(`Graph saved to cloud: ${payload.graph.id}`);
+      if (!silent) alert(`Graph saved to cloud: ${payload.graph.id}`);
+      return true;
     } catch {
-      alert('Network error while saving graph.');
+      if (!silent) alert('Network error while saving graph.');
+      return false;
     } finally {
       setIsSavingCloud(false);
     }
@@ -247,8 +348,8 @@ function App() {
 
   const loadGraphFromCloud = async () => {
     if (!graphId.trim()) {
-      alert('Please enter a graph id.');
-      return;
+      if (!silent) alert('Please enter a graph id.');
+      return false;
     }
 
     setIsLoadingCloud(true);
@@ -259,15 +360,19 @@ function App() {
       });
       const payload = await response.json();
       if (!response.ok) {
-        alert(payload.error || 'Failed to load graph from cloud.');
-        return;
+        if (!silent) alert(payload.error || 'Failed to load graph from cloud.');
+        return false;
       }
 
       const normalized = normalizeGraphData(payload.graph.data);
       setGraphData(normalized);
-      alert(`Loaded graph ${payload.graph.id} from cloud.`);
+      setRecordedOGPositions(normalizeOGSnapshot(payload.graph.data?.ogSnapshot));
+      setCameraBookmarks(normalizeCameraBookmarks(payload.graph.data?.cameraBookmarks));
+      if (!silent) alert(`Loaded graph ${payload.graph.id} from cloud.`);
+      return true;
     } catch {
-      alert('Network error while loading graph.');
+      if (!silent) alert('Network error while loading graph.');
+      return false;
     } finally {
       setIsLoadingCloud(false);
     }
@@ -301,56 +406,380 @@ function App() {
     setSelectedFileForLoad(null);
   };
 
-    const saveOGData = () => {
-    const blob = new Blob([JSON.stringify(recordedOGPositions, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'OG.json';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const appendConsoleLine = (line) => {
+    setConsoleLines((prev) => [...prev, line].slice(-120));
   };
 
-  const handleLoadOGFile = () => {
-    if (!selectedFileForLoad) {
-      alert("Please select an OG.json file first");
+  const fetchGraphCatalog = async () => {
+    const response = await fetch('/api/graphs', { method: 'GET', credentials: 'include' });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || 'Failed to list graphs.');
+    }
+
+    return payload.graphs || [];
+  };
+
+  const runConsoleCommand = async (rawCommand) => {
+    const command = rawCommand.trim();
+    if (!command) {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const ogData = JSON.parse(e.target.result);
+    appendConsoleLine(`] ${command}`);
+    const [action, ...rest] = command.split(/\s+/);
 
-        setGraphData(prevGraphData => {
-          const newNodes = prevGraphData.nodes.map(node => {
-            const ogNode = ogData.nodes.find(ogNode => ogNode.id === node.id);
-            if (ogNode) {
-              return {
-                ...node,
-                x: ogNode.x,
-                y: ogNode.y,
-                z: ogNode.z,
-                fx: ogNode.x,
-                fy: ogNode.y,
-                fz: ogNode.z,
-              };
-            } else {
-              return node;
-            }
-          });
-          return { ...prevGraphData, nodes: newNodes, links: ogData.links || [] };
-        });
-        alert(`Loaded ${recordedOGPositions.nodes.length} OG positions and ${recordedOGPositions.links.length} links successfully!`);
-        setSelectedFileForLoad(null);
-      } catch (error) {
-        console.error("Error parsing OG.json file:", error);
-        alert("Error parsing OG.json file. Please ensure it is valid JSON.");
+    if (action === 'help') {
+      appendConsoleLine('Commands: help, clear, new, set <graphId>, save, load, list, groups list|hide|show|toggle|showall, og record|save|load, camera capture|list|load|delete|save|sync, focus, collapse, zoomout, toggle <panel>.');
+      appendConsoleLine('Panels: add-node, delete-node, add-link, controls.');
+      return;
+    }
+
+    if (action === 'clear') {
+      setConsoleLines(['MindMap Console cleared.']);
+      return;
+    }
+
+    if (action === 'new') {
+      handleNewGraph();
+      appendConsoleLine('Created a new empty graph.');
+      return;
+    }
+
+    if (action === 'set') {
+      const newGraphId = rest.join(' ').trim();
+      if (!newGraphId) {
+        appendConsoleLine('Usage: set <graphId>');
+        return;
       }
-    };
-    reader.readAsText(selectedFileForLoad);
+
+      setGraphId(newGraphId);
+      appendConsoleLine(`Active graph id set to: ${newGraphId}`);
+      return;
+    }
+
+    if (action === 'save') {
+      const ok = await saveGraphToCloud({ silent: true });
+      appendConsoleLine(ok ? `Saved graph: ${graphId}` : `Save failed for graph: ${graphId}`);
+      return;
+    }
+
+    if (action === 'load') {
+      const ok = await loadGraphFromCloud({ silent: true });
+      appendConsoleLine(ok ? `Loaded graph: ${graphId}` : `Load failed for graph: ${graphId}`);
+      return;
+    }
+
+    if (action === 'list') {
+      try {
+        const graphs = await fetchGraphCatalog();
+        if (!graphs.length) {
+          appendConsoleLine('No graphs found in database.');
+          return;
+        }
+        appendConsoleLine(`Found ${graphs.length} graph(s):`);
+        graphs.forEach((graph) => appendConsoleLine(`- ${graph.id} (${new Date(graph.updated_at).toLocaleString()})`));
+      } catch (error) {
+        appendConsoleLine(error.message || 'Failed to list graphs.');
+      }
+      return;
+    }
+
+    if (action === 'groups') {
+      const sub = rest[0];
+      const groupName = rest.slice(1).join(' ').trim();
+
+      if (!sub || sub === 'list') {
+        if (!groupNames.length) {
+          appendConsoleLine('No groups found in current graph.');
+          return;
+        }
+        appendConsoleLine(`Groups (${groupNames.length}):`);
+        groupNames.forEach((name) => {
+          appendConsoleLine(`- ${name} [${hiddenGroups.has(name) ? 'hidden' : 'visible'}]`);
+        });
+        return;
+      }
+
+      if (sub === 'showall') {
+        showAllGroups();
+        appendConsoleLine('All groups are now visible.');
+        return;
+      }
+
+      if (!groupName) {
+        appendConsoleLine('Usage: groups list | groups hide <name> | groups show <name> | groups toggle <name> | groups showall');
+        return;
+      }
+
+      if (!groupNames.includes(groupName)) {
+        appendConsoleLine(`Unknown group: ${groupName}`);
+        return;
+      }
+
+      if (sub === 'hide') {
+        setHiddenGroups((prev) => new Set(prev).add(groupName));
+        appendConsoleLine(`Group hidden: ${groupName}`);
+        return;
+      }
+
+      if (sub === 'show') {
+        setHiddenGroups((prev) => {
+          const next = new Set(prev);
+          next.delete(groupName);
+          return next;
+        });
+        appendConsoleLine(`Group visible: ${groupName}`);
+        return;
+      }
+
+      if (sub === 'toggle') {
+        const currentlyHidden = hiddenGroups.has(groupName);
+        toggleGroupVisibility(groupName);
+        appendConsoleLine(`Group ${currentlyHidden ? 'visible' : 'hidden'}: ${groupName}`);
+        return;
+      }
+
+      appendConsoleLine('Usage: groups list | groups hide <name> | groups show <name> | groups toggle <name> | groups showall');
+      return;
+    }
+
+    if (action === 'og') {
+      const sub = rest[0];
+      if (sub === 'record') {
+        recordOGPositions();
+        appendConsoleLine('Recorded OG snapshot from current fixed node positions.');
+        return;
+      }
+      if (sub === 'save') {
+        const ok = await saveOGToDatabase({ silent: true });
+        appendConsoleLine(ok ? `Saved OG snapshot for graph: ${graphId}` : `Failed to save OG snapshot for graph: ${graphId}`);
+        return;
+      }
+      if (sub === 'load') {
+        const ok = await loadOGFromDatabase({ silent: true });
+        appendConsoleLine(ok ? `Loaded OG snapshot for graph: ${graphId}` : `Failed to load OG snapshot for graph: ${graphId}`);
+        return;
+      }
+      appendConsoleLine('Usage: og record | og save | og load');
+      return;
+    }
+
+
+    if (action === 'camera') {
+      const sub = rest[0];
+      const arg = rest.slice(1).join(' ').trim();
+
+      if (sub === 'capture') {
+        const camera = graphRef.current?.camera();
+        const controls = graphRef.current?.controls();
+        if (!camera || !controls) {
+          appendConsoleLine('Camera unavailable.');
+          return;
+        }
+
+        const name = arg || cameraBookmarkName || `view-${cameraBookmarks.length + 1}`;
+        const bookmark = {
+          name,
+          position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+          lookAt: { x: controls.target.x, y: controls.target.y, z: controls.target.z },
+          up: { x: camera.up.x, y: camera.up.y, z: camera.up.z },
+          zoom: camera.zoom,
+          isOrthographic: camera.isOrthographicCamera,
+        };
+
+        setCameraBookmarks((prev) => {
+          const others = prev.filter((entry) => entry.name !== name);
+          return [...others, bookmark];
+        });
+        setCameraBookmarkName(name);
+        appendConsoleLine(`Captured camera bookmark: ${name}`);
+        return;
+      }
+
+      if (sub === 'list') {
+        if (!cameraBookmarks.length) {
+          appendConsoleLine('No camera bookmarks recorded.');
+          return;
+        }
+        cameraBookmarks.forEach((bookmark, index) => appendConsoleLine(`${index + 1}. ${bookmark.name}`));
+        return;
+      }
+
+      if (sub === 'load') {
+        if (!arg) {
+          appendConsoleLine('Usage: camera load <name>');
+          return;
+        }
+        const bookmark = cameraBookmarks.find((entry) => entry.name === arg);
+        if (!bookmark) {
+          appendConsoleLine(`Bookmark not found: ${arg}`);
+          return;
+        }
+        setCameraView(bookmark.position, bookmark.lookAt, bookmark.up, bookmark.zoom, bookmark.isOrthographic);
+        appendConsoleLine(`Loaded camera bookmark: ${bookmark.name}`);
+        return;
+      }
+
+      if (sub === 'delete') {
+        if (!arg) {
+          appendConsoleLine('Usage: camera delete <name>');
+          return;
+        }
+        setCameraBookmarks((prev) => prev.filter((entry) => entry.name !== arg));
+        appendConsoleLine(`Deleted camera bookmark (if existed): ${arg}`);
+        return;
+      }
+
+      if (sub === 'save') {
+        const ok = await saveGraphToCloud({ silent: true });
+        appendConsoleLine(ok ? `Saved camera bookmarks to DB for graph: ${graphId}` : `Failed to save camera bookmarks for graph: ${graphId}`);
+        return;
+      }
+
+      if (sub === 'sync') {
+        const ok = await loadGraphFromCloud({ silent: true });
+        appendConsoleLine(ok ? `Synced camera bookmarks from DB for graph: ${graphId}` : `Failed to sync camera bookmarks for graph: ${graphId}`);
+        return;
+      }
+
+      appendConsoleLine('Usage: camera capture <name> | camera list | camera load <name> | camera delete <name> | camera save | camera sync');
+      return;
+    }
+
+    if (action === 'zoomout') {
+      handleZoomOut();
+      appendConsoleLine('Camera reset to default view.');
+      return;
+    }
+
+    if (action === 'focus') {
+      setIsFocusMode((prev) => {
+        const next = !prev;
+        appendConsoleLine(`Focus mode: ${next ? 'ON' : 'OFF'}`);
+        return next;
+      });
+      return;
+    }
+
+    if (action === 'collapse') {
+      setCollapseMode((prev) => {
+        const next = !prev;
+        appendConsoleLine(`Collapse mode: ${next ? 'ON' : 'OFF'}`);
+        return next;
+      });
+      return;
+    }
+
+    if (action === 'toggle') {
+      const panel = rest[0];
+      const toggles = {
+        'add-node': () => setShowAddNode((prev) => !prev),
+        'delete-node': () => setShowDeleteNode((prev) => !prev),
+        'add-link': () => setShowAddLink((prev) => !prev),
+        controls: () => setShowControls((prev) => !prev),
+      };
+
+      if (!toggles[panel]) {
+        appendConsoleLine('Unknown panel. Use: add-node, delete-node, add-link, controls.');
+        return;
+      }
+
+      toggles[panel]();
+      appendConsoleLine(`Toggled panel: ${panel}`);
+      return;
+    }
+
+    appendConsoleLine(`Unknown command: ${action}. Type help.`);
+  };
+
+  const submitConsoleCommand = async () => {
+    const command = consoleInput;
+    setConsoleInput('');
+    await runConsoleCommand(command);
+  };
+
+
+    const applyOGSnapshotToGraph = useCallback((snapshot) => {
+    const normalizedSnapshot = normalizeOGSnapshot(snapshot);
+
+    if (!normalizedSnapshot.nodes.length) {
+      return false;
+    }
+
+    setGraphData((prevGraphData) => {
+      const newNodes = prevGraphData.nodes.map((node) => {
+        const ogNode = normalizedSnapshot.nodes.find((candidate) => candidate.id === node.id);
+        if (!ogNode) {
+          return node;
+        }
+
+        return {
+          ...node,
+          x: ogNode.x,
+          y: ogNode.y,
+          z: ogNode.z,
+          fx: ogNode.x,
+          fy: ogNode.y,
+          fz: ogNode.z,
+        };
+      });
+
+      return {
+        ...prevGraphData,
+        nodes: newNodes,
+        links: normalizedSnapshot.links.length ? normalizedSnapshot.links : prevGraphData.links,
+      };
+    });
+
+    setRecordedOGPositions(normalizedSnapshot);
+    return true;
+  }, [normalizeOGSnapshot]);
+
+  const saveOGToDatabase = async ({ silent = false } = {}) => {
+    const hasSnapshot = recordedOGPositions.nodes.length > 0 || recordedOGPositions.links.length > 0;
+    if (!hasSnapshot) {
+      if (!silent) alert('No OG positions to save. Please record OG positions first.');
+      return false;
+    }
+
+    const ok = await saveGraphToCloud({ silent });
+    if (ok && !silent) {
+      alert(`OG snapshot saved to database for graph: ${graphId}`);
+    }
+
+    return ok;
+  };
+
+  const loadOGFromDatabase = async ({ silent = false } = {}) => {
+    if (!graphId.trim()) {
+      if (!silent) alert('Please enter a graph id.');
+      return false;
+    }
+
+    try {
+      const response = await fetch(`/api/graphs/${encodeURIComponent(graphId.trim())}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        if (!silent) alert(payload.error || 'Failed to load OG snapshot from database.');
+        return false;
+      }
+
+      const applied = applyOGSnapshotToGraph(payload.graph.data?.ogSnapshot);
+      if (!applied) {
+        if (!silent) alert(`No OG snapshot saved for graph ${payload.graph.id}.`);
+        return false;
+      }
+
+      if (!silent) alert(`Loaded OG snapshot from database for graph: ${payload.graph.id}`);
+      return true;
+    } catch {
+      if (!silent) alert('Network error while loading OG snapshot.');
+      return false;
+    }
   };
 
   const startLinkSelection = () => {
@@ -488,6 +917,7 @@ function App() {
       id: newNodeId.trim(),
       color: '#1A75FF',
       textSize: 6,
+      group: getNodeGroupLabel(newNodeGroup),
       x: nodePosition.x,
       y: nodePosition.y,
       z: nodePosition.z,
@@ -502,6 +932,7 @@ function App() {
     }));
 
     setNewNodeId('');
+    setNewNodeGroup((prev) => prev || 'general');
     
     // Reset the selected target node after adding
     if (selectedNodeToPull) {
@@ -575,43 +1006,25 @@ function App() {
     alert(`Recorded ${fixedPositions.length} fixed node positions and ${recordedLinks.length} links for OG mode!`);
   };
 
-  const saveOGPositions = () => {
-    if (recordedOGPositions.nodes.length === 0 && recordedOGPositions.links.length === 0) {
-      alert("No OG positions or links to save. Please record positions first.");
-      return;
-    }
-    const blob = new Blob([JSON.stringify(recordedOGPositions, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "OG.json";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    alert("OG.json saved successfully!");
-  };
-
   const onNodeDragEnd = useCallback(node => {
     node.fx = node.x;
     node.fy = node.y;
     node.fz = node.z;
-    if (showOGMode) {
-      const fixedPositions = graphData.nodes.filter(n => n.fx !== null && n.fy !== null && n.fz !== null).map(n => ({
-        id: n.id,
-        x: n.x,
-        y: n.y,
-        z: n.z,
-      }));
-      const recordedLinks = graphData.links.map(link => ({
-        source: typeof link.source === 'object' ? link.source.id : link.source,
-        target: typeof link.target === 'object' ? link.target.id : link.target,
-        color: link.color,
-        thickness: link.thickness,
-      }));
-      setRecordedOGPositions({ nodes: fixedPositions, links: recordedLinks });
-    }
-  }, [showOGMode, graphData.nodes, graphData.links]);
+
+    const fixedPositions = graphData.nodes.filter(n => n.fx !== null && n.fy !== null && n.fz !== null).map(n => ({
+      id: n.id,
+      x: n.x,
+      y: n.y,
+      z: n.z,
+    }));
+    const recordedLinks = graphData.links.map(link => ({
+      source: typeof link.source === 'object' ? link.source.id : link.source,
+      target: typeof link.target === 'object' ? link.target.id : link.target,
+      color: link.color,
+      thickness: link.thickness,
+    }));
+    setRecordedOGPositions({ nodes: fixedPositions, links: recordedLinks });
+  }, [graphData.nodes, graphData.links]);
 
   const handleNextNode = useCallback(() => {
     if (!graphData.nodes || graphData.nodes.length === 0) {
@@ -828,114 +1241,6 @@ function App() {
     }
   }, [setCameraView]);
 
-  const saveBookmark = useCallback(() => {
-    if (!bookmarkName.trim()) {
-      alert('Please enter a bookmark name');
-      return;
-    }
-    const camera = graphRef.current.camera();
-    const bookmark = {
-      name: bookmarkName,
-      position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
-      lookAt: { x: graphRef.current.controls().target.x, y: graphRef.current.controls().target.y, z: graphRef.current.controls().target.z },
-      up: { x: camera.up.x, y: camera.up.y, z: camera.up.z },
-      zoom: camera.zoom,
-      isOrthographic: camera.isOrthographicCamera,
-    };
-    setCameraBookmarks(prev => [...prev, bookmark]);
-    setBookmarkName('');
-    alert(`Bookmark "${bookmarkName}" saved!`);
-  }, [bookmarkName]);
-
-  const loadBookmark = useCallback((bookmark) => {
-    setCameraView(bookmark.position, bookmark.lookAt, bookmark.up, bookmark.zoom, bookmark.isOrthographic);
-  }, [setCameraView]);
-
-  const deleteBookmark = useCallback((indexToDelete) => {
-    setCameraBookmarks(prev => prev.filter((_, index) => index !== indexToDelete));
-  }, []);
-
-  const importBookmarks = useCallback((file) => {
-    if (!file) {
-      alert("Please select a JSON file to load bookmarks.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const loadedBookmarks = JSON.parse(e.target.result);
-        if (!Array.isArray(loadedBookmarks) || !loadedBookmarks.every(b => b.name && b.position && b.lookAt && b.up && b.zoom !== undefined)) {
-          throw new Error("Invalid bookmark file format.");
-        }
-        setCameraBookmarks(loadedBookmarks.map(b => ({ ...b, isOrthographic: b.isOrthographic !== undefined ? b.isOrthographic : false })));
-        setSelectedBookmarkFileForLoad(null);
-        alert(`Loaded ${loadedBookmarks.length} camera bookmarks!`);
-      } catch (error) {
-        console.error("Error loading bookmarks:", error);
-        alert(`Error loading bookmarks: ${error.message}. Please ensure it's a valid JSON file with the correct format.`);
-      }
-    };
-    reader.readAsText(file);
-  }, []);
-
-    const saveCameraBookmark = () => {
-    if (!bookmarkName.trim()) {
-      alert("Please enter a bookmark name");
-      return;
-    }
-    const { x, y, z } = fgRef.current.cameraPosition();
-    const newBookmark = {
-      name: bookmarkName,
-      position: { x, y, z },
-      lookAt: fgRef.current.controls().target
-    };
-    setCameraBookmarks(prev => [...prev, newBookmark]);
-    setBookmarkName("");
-  };
-
-  const handleLoadBookmarksFile = () => {
-    if (!selectedBookmarkFileForLoad) {
-      alert("Please select a bookmarks JSON file first");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const bookmarks = JSON.parse(e.target.result);
-        setCameraBookmarks(bookmarks);
-      } catch (err) {
-        alert("Error parsing bookmarks file");
-      }
-    };
-    reader.readAsText(selectedBookmarkFileForLoad);
-  };
-
-  const applyCameraBookmark = (bookmark) => {
-    fgRef.current.cameraPosition(
-      bookmark.position,
-      bookmark.lookAt,
-      2000
-    );
-  };
-
-  const exportBookmarks = useCallback(() => {
-    if (cameraBookmarks.length === 0) {
-      alert("No bookmarks to export.");
-      return;
-    }
-    const blob = new Blob([JSON.stringify(cameraBookmarks, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'camera_bookmarks.json';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    alert("Camera bookmarks exported to camera_bookmarks.json!");
-  }, [cameraBookmarks]);
-
   useEffect(() => {
     if (graphRef.current) {
       graphRef.current.d3Force('charge').strength(-120);
@@ -967,8 +1272,29 @@ function App() {
     return () => clearInterval(autoRotateRef.current);
   }, [autoRotate, rotationSpeed]);
 
+
+  useEffect(() => {
+    const handleGlobalKeydown = (event) => {
+      if (event.key !== 'Tab') {
+        return;
+      }
+
+      const activeTag = document.activeElement?.tagName;
+      const isTypingField = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || document.activeElement?.isContentEditable;
+      if (isTypingField) {
+        return;
+      }
+
+      event.preventDefault();
+      setShowConsole((prev) => !prev);
+    };
+
+    window.addEventListener('keydown', handleGlobalKeydown);
+    return () => window.removeEventListener('keydown', handleGlobalKeydown);
+  }, []);
+
   // Filter graph data based on collapsed nodes
-  const displayGraphData = filterGraphByCollapsedNodes(graphData, collapsedNodes);
+  const displayGraphData = filterGraphByCollapsedNodes(visibleGraphData, collapsedNodes);
 
   return (
     <div className="relative h-screen w-screen bg-black text-white">
@@ -1110,6 +1436,11 @@ function App() {
                   placeholder="Node ID"
                   value={newNodeId}
                   onChange={(e) => setNewNodeId(e.target.value)}
+                />
+                <Input
+                  placeholder="Group label (e.g. project-alpha)"
+                  value={newNodeGroup}
+                  onChange={(e) => setNewNodeGroup(e.target.value)}
                 />
                 <Button onClick={addNode} size="sm" className="w-full">
                   Add Node
@@ -1322,167 +1653,6 @@ function App() {
         </FloatablePanel>
       )}
 
-      {showQuickActions && (
-        <FloatablePanel
-          id="quick-actions-panel"
-          title="Quick Actions"
-          defaultPosition={{ x: getPanelX("quick-actions"), y: 80 }}
-          defaultSize={{ width: window.innerWidth * 0.18, height: 'auto' }}
-          minWidth={250}
-          minHeight={200}
-          onClose={() => setShowQuickActions(false)}
-        >
-          <div className="space-y-4">
-            <div className="space-y-2">
-                <Button
-                  onClick={() => setIsFocusMode(prev => !prev)}
-                  size="sm"
-                  className="w-full"
-                  variant={isFocusMode ? "default" : "outline"}
-                >
-                  {isFocusMode ? "Focus Mode: ON" : "Focus Mode: OFF"}
-                </Button>
-                <Button onClick={handleZoomOut} size="sm" className="w-full" variant="outline">
-                  Zoom Out
-                </Button>
-                <Separator className="my-2" />
-                <Button onClick={() => setShowOGMode(prev => !prev)} size="sm" className="w-full">
-                  {showOGMode ? "Hide OG Mode" : "Show OG Mode"}
-                </Button>
-                <Button onClick={() => setShowCameraControls(prev => !prev)} size="sm" className="w-full" variant="outline">
-                  {showCameraControls ? "Hide Camera Controls" : "Show Camera Controls"}
-                </Button>
-                <Separator className="my-2" />
-                <Button
-                  onClick={() => setCollapseMode(prev => !prev)}
-                  size="sm"
-                  className="w-full"
-                  variant={collapseMode ? "default" : "outline"}
-                >
-                  {collapseMode ? "Collapse Mode: ON" : "Collapse Mode: OFF"}
-                </Button>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Collapsed branches: {collapsedNodes.size}
-                </p>
-              </div>
-          </div>
-        </FloatablePanel>
-      )}
-
-      {/* OG Mode Panel */}
-      {showOGMode && (
-        <FloatablePanel
-          id="og-mode-panel"
-          title="OG Mode"
-          defaultPosition={{ x: window.innerWidth * 0.7, y: 80 }}
-          defaultSize={{ width: 280, height: 'auto' }}
-          onClose={() => setShowOGMode(false)}
-        >
-          <div className="space-y-4">
-            {/* OG Mode Content */}
-            <div className="space-y-2">
-              <Label>Load OG.json File</Label>
-              <Input
-                type="file"
-                accept=".json"
-                onChange={(e) => setSelectedFileForLoad(e.target.files[0])}
-              />
-              <Button onClick={handleLoadOGFile} size="sm" className="w-full">
-                Load OG.json
-              </Button>
-              <Separator className="my-3" />
-              <Button onClick={recordOGPositions} size="sm" className="w-full">
-                Record OG Positions
-              </Button>
-              <Button onClick={saveOGData} size="sm" className="w-full">
-                Save OG.json
-              </Button>
-              <div className="text-xs text-muted-foreground mt-2">
-                Recorded OG Positions: {recordedOGPositions.nodes.length} nodes, {recordedOGPositions.links.length} links
-              </div>
-            </div>
-          </div>
-        </FloatablePanel>
-      )}
-
-      {/* Camera Controls Panel */}
-      {showCameraControls && (
-        <FloatablePanel
-          id="camera-controls-panel"
-          title="Camera Controls"
-          defaultPosition={{ x: window.innerWidth * 0.7, y: 450 }}
-          defaultSize={{ width: 315, height: 'auto' }}
-          onClose={() => setShowCameraControls(false)}
-        >
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Button onClick={handleZoomOut} size="sm" className="w-full" variant="outline">
-                Reset to Default View
-              </Button>
-              
-              <Separator className="my-2" />
-              
-              <div className="space-y-2">
-                <Label>Save Camera Bookmark</Label>
-                <div className="flex gap-2">
-                  <Input 
-                    placeholder="Bookmark name" 
-                    value={bookmarkName}
-                    onChange={(e) => setBookmarkName(e.target.value)}
-                  />
-                  <Button onClick={saveCameraBookmark}>Save</Button>
-                </div>
-              </div>
-
-              <Separator className="my-2" />
-
-              <div className="space-y-2">
-                <Label>Load Bookmarks File</Label>
-                <Input 
-                  type="file" 
-                  accept=".json"
-                  onChange={(e) => setSelectedBookmarkFileForLoad(e.target.files[0])}
-                />
-                <Button onClick={handleLoadBookmarksFile} size="sm" className="w-full">
-                  Load Bookmarks
-                </Button>
-                <Button onClick={exportBookmarks} size="sm" className="w-full" variant="outline">
-                  Export All Bookmarks
-                </Button>
-              </div>
-
-              {cameraBookmarks.length > 0 && (
-                <>
-                  <Separator className="my-2" />
-                  <div className="space-y-2">
-                    <Label>Bookmarks List</Label>
-                    <div className="max-h-40 overflow-y-auto space-y-1 pr-2">
-                      {cameraBookmarks.map((bookmark, index) => (
-                        <div key={index} className="flex items-center justify-between bg-secondary/20 p-2 rounded text-sm">
-                          <span className="truncate flex-1 cursor-pointer hover:text-primary" onClick={() => applyCameraBookmark(bookmark)}>
-                            {bookmark.name}
-                          </span>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-6 w-6 text-destructive"
-                            onClick={() => {
-                              setCameraBookmarks(prev => prev.filter((_, i) => i !== index));
-                            }}
-                          >
-                            <X size={14} />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </FloatablePanel>
-      )}
-
       {!showControls && (
         <Button
           className="absolute top-4 left-4 z-10"
@@ -1583,12 +1753,39 @@ function App() {
         </FloatablePanel>
       )}
       {/* Master Toggle Menu */}
-      <div className="absolute top-5 left-1/2 -translate-x-1/2 z-50 flex gap-4 bg-white/95 backdrop-blur-lg p-5 rounded-full shadow-2xl border border-gray-300">
-        <Button className="text-base px-4 py-2 h-auto" variant={showFileOps ? "default" : "outline"} onClick={() => setShowFileOps(prev => !prev)}>Files</Button>
+      <div className="absolute top-5 left-1/2 -translate-x-1/2 z-50 flex max-w-[95vw] flex-col items-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-zinc-500/70 bg-zinc-900/70 p-3 shadow-2xl backdrop-blur-md">
+        <Button className="text-base px-4 py-2 h-auto" variant={showConsole ? "default" : "outline"} onClick={() => setShowConsole(prev => !prev)}>Console</Button>
         <Button className="text-base px-4 py-2 h-auto" variant={showAddNode ? "default" : "outline"} onClick={() => setShowAddNode(prev => !prev)}>+ Node</Button>
         <Button className="text-base px-4 py-2 h-auto" variant={showDeleteNode ? "default" : "outline"} onClick={() => setShowDeleteNode(prev => !prev)}>- Node</Button>
         <Button className="text-base px-4 py-2 h-auto" variant={showAddLink ? "default" : "outline"} onClick={() => setShowAddLink(prev => !prev)}>Link</Button>
-        <Button className="text-base px-4 py-2 h-auto" variant={showQuickActions ? "default" : "outline"} onClick={() => setShowQuickActions(prev => !prev)}>Actions</Button>
+        </div>
+        {groupNames.length > 0 && (
+          <div className="flex max-w-[95vw] flex-wrap items-center justify-center gap-2 rounded-2xl border border-zinc-600/70 bg-black/40 px-3 py-2 backdrop-blur-sm">
+            <span className="text-xs uppercase tracking-wide text-zinc-300">Groups</span>
+            {groupNames.map((groupName) => {
+              const isVisible = !hiddenGroups.has(groupName);
+              return (
+                <button
+                  key={groupName}
+                  type="button"
+                  onClick={() => toggleGroupVisibility(groupName)}
+                  className={`rounded-full border px-3 py-1 text-xs transition ${isVisible ? 'border-emerald-400/80 bg-emerald-500/20 text-emerald-100' : 'border-zinc-500 bg-zinc-900/80 text-zinc-400 line-through'}`}
+                >
+                  {groupName}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={showAllGroups}
+              className="rounded-full border border-zinc-400 px-3 py-1 text-xs text-zinc-200 hover:bg-zinc-700/60"
+            >
+              Show all
+            </button>
+          </div>
+        )}
+        <p className="text-xs text-zinc-300 bg-black/50 px-2 py-1 rounded">Mobile: use the Console button to toggle the panel.</p>
       </div>
     </div>
   );
