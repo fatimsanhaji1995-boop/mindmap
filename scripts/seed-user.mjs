@@ -1,0 +1,77 @@
+import bcrypt from 'bcryptjs';
+import { Pool } from 'pg';
+
+function getArg(name) {
+  const prefix = `--${name}=`;
+  const arg = process.argv.find((a) => a.startsWith(prefix));
+  return arg ? arg.slice(prefix.length) : '';
+}
+
+function getConnectionString() {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  if (process.env.POSTGRES_URL) return process.env.POSTGRES_URL;
+
+  const host = process.env.PGHOST || process.env.POSTGRES_HOST;
+  const user = process.env.PGUSER || process.env.POSTGRES_USER;
+  const password = process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD;
+  const database = process.env.PGDATABASE || process.env.POSTGRES_DATABASE;
+
+  if (!host || !user || !password || !database) return '';
+
+  const sslmode = process.env.PGSSLMODE || 'require';
+  return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}/${database}?sslmode=${sslmode}`;
+}
+
+const email = (getArg('email') || '').trim().toLowerCase();
+const password = getArg('password') || '';
+const connectionString = getConnectionString();
+
+if (!connectionString) {
+  console.error('DATABASE_URL (or POSTGRES_URL / PG* variables) is required.');
+  process.exit(1);
+}
+
+if (!email || !password) {
+  console.error('Usage: node scripts/seed-user.mjs --email=user@example.com --password=secret');
+  process.exit(1);
+}
+
+if (password.length < 6) {
+  console.error('Password must be at least 6 characters.');
+  process.exit(1);
+}
+
+const pool = new Pool({
+  connectionString,
+  ssl: connectionString.includes('localhost') ? false : { rejectUnauthorized: false },
+});
+
+const createUsersTableSql = `
+CREATE TABLE IF NOT EXISTS users (
+  id BIGSERIAL PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+`;
+
+try {
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  await pool.query(createUsersTableSql);
+  const result = await pool.query(
+    `INSERT INTO users(email, password_hash)
+     VALUES ($1, $2)
+     ON CONFLICT (email)
+     DO UPDATE SET password_hash = EXCLUDED.password_hash
+     RETURNING id, email`,
+    [email, passwordHash],
+  );
+
+  console.log(`Seeded user ${result.rows[0].email} (id=${result.rows[0].id}).`);
+} catch (error) {
+  console.error('Failed to seed user:', error);
+  process.exitCode = 1;
+} finally {
+  await pool.end();
+}
