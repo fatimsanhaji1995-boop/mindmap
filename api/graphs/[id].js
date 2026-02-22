@@ -1,54 +1,8 @@
 /* eslint-env node */
 import { getDb } from '../_lib/db.js';
-import { getSingleUserId } from '../_lib/single-user.js';
 
-function normalizeOgSnapshot(payload) {
-  if (!payload || typeof payload !== 'object') {
-    return null;
-  }
-
-  const nodes = Array.isArray(payload.nodes) ? payload.nodes : [];
-  const links = Array.isArray(payload.links) ? payload.links : [];
-
-  return {
-    nodes: nodes.map(({ id, x, y, z }) => ({ id, x, y, z })),
-    links: links.map(({ source, target, color, thickness }) => ({
-      source: typeof source === 'object' ? source.id : source,
-      target: typeof target === 'object' ? target.id : target,
-      color,
-      thickness,
-    })),
-    updatedAt: payload.updatedAt || new Date().toISOString(),
-  };
-}
-
-
-function normalizeCameraBookmarks(payload) {
-  if (!Array.isArray(payload)) {
-    return [];
-  }
-
-  return payload.map((bookmark, index) => ({
-    name: bookmark?.name || `view-${index + 1}`,
-    position: {
-      x: bookmark?.position?.x ?? 0,
-      y: bookmark?.position?.y ?? 0,
-      z: bookmark?.position?.z ?? 400,
-    },
-    lookAt: {
-      x: bookmark?.lookAt?.x ?? 0,
-      y: bookmark?.lookAt?.y ?? 0,
-      z: bookmark?.lookAt?.z ?? 0,
-    },
-    up: {
-      x: bookmark?.up?.x ?? 0,
-      y: bookmark?.up?.y ?? 1,
-      z: bookmark?.up?.z ?? 0,
-    },
-    zoom: bookmark?.zoom ?? 1,
-    isOrthographic: Boolean(bookmark?.isOrthographic),
-  }));
-}
+const SINGLE_USER_EMAIL = process.env.SINGLE_USER_EMAIL || 'solo@mindmap.local';
+const SINGLE_USER_PASSWORD_HASH = process.env.SINGLE_USER_PASSWORD_HASH || 'single-user-mode';
 
 function normalizeGraph(payload) {
   const nodes = Array.isArray(payload?.nodes) ? payload.nodes : [];
@@ -67,6 +21,19 @@ function normalizeGraph(payload) {
     ...(ogSnapshot ? { ogSnapshot } : {}),
     ...(cameraBookmarks.length ? { cameraBookmarks } : {}),
   };
+}
+
+async function getSingleUserId(db) {
+  const result = await db.query(
+    `INSERT INTO users(email, password_hash)
+     VALUES ($1, $2)
+     ON CONFLICT (email)
+     DO UPDATE SET email = EXCLUDED.email
+     RETURNING id`,
+    [SINGLE_USER_EMAIL, SINGLE_USER_PASSWORD_HASH],
+  );
+
+  return result.rows[0].id;
 }
 
 export default async function handler(req, res) {

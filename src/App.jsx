@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
 import { Slider } from '@/components/ui/slider.jsx';
 import FloatablePanel from '@/components/FloatablePanel.jsx';
+import RegistrationForm from '@/components/RegistrationForm.jsx';
 import { getDescendants, filterGraphByCollapsedNodes, toggleNodeCollapse, isNodeCollapsed } from '@/lib/collapseUtils';
 import './App.css';
 
@@ -62,7 +63,14 @@ function App() {
   const [autoRotate, setAutoRotate] = useState(false);
   const [rotationSpeed, setRotationSpeed] = useState(1);
   const [cameraBookmarks, setCameraBookmarks] = useState([]);
-  const [cameraBookmarkName, setCameraBookmarkName] = useState('view-1');
+  const [bookmarkName, setBookmarkName] = useState('');
+  const [selectedBookmarkFileForLoad, setSelectedBookmarkFileForLoad] = useState(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authMessage, setAuthMessage] = useState('');
+  const [authMessageType, setAuthMessageType] = useState('');
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [graphId, setGraphId] = useState('default-graph');
   const [isSavingCloud, setIsSavingCloud] = useState(false);
   const [isLoadingCloud, setIsLoadingCloud] = useState(false);
@@ -197,31 +205,111 @@ function App() {
   }, []);
 
   useEffect(() => {
-    setHiddenGroups((prev) => {
-      if (!prev.size) {
-        return prev;
+    if (import.meta.env.DEV) {
+      return;
+    }
+
+    const checkSession = async () => {
+      try {
+        const response = await fetch('/api/auth/me', { credentials: 'include' });
+        if (!response.ok) {
+          setCurrentUser(null);
+          return;
+        }
+        const payload = await response.json();
+        setCurrentUser(payload.user);
+        setAuthMessage(`Signed in as ${payload.user.email}`);
+        setAuthMessageType('success');
+      } catch {
+        setCurrentUser(null);
       }
-      const allowed = new Set(groupNames);
-      const next = new Set([...prev].filter((groupName) => allowed.has(groupName)));
-      return next.size === prev.size ? prev : next;
+    };
+
+    checkSession();
+  }, []);
+
+  const getCleanGraphData = useCallback(() => ({
+    nodes: graphData.nodes.map(({ id, color, textSize, group, x, y, z }) => ({
+      id, color, textSize, group, x, y, z,
+    })),
+    links: graphData.links.map(({ source, target, color, thickness }) => ({
+      source: typeof source === 'object' ? source.id : source,
+      target: typeof target === 'object' ? target.id : target,
+      color,
+      thickness,
+    })),
+  }), [graphData]);
+
+  const validateAuthInputs = () => {
+    if (!email || !password) {
+      alert('Please enter both email and password.');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleLogin = async () => {
+    if (!validateAuthInputs()) {
+      return;
+    }
+
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      alert(payload.error || 'Failed to login.');
+      return;
+    }
+
+    setCurrentUser(payload.user);
+    setPassword('');
+    alert(`Logged in as ${payload.user.email}`);
+  };
+
+  const handleRegister = async () => {
+    if (!validateAuthInputs()) {
+      return;
+    }
+
+    const response = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
     });
   }, [groupNames]);
 
-  const toggleGroupVisibility = useCallback((groupName) => {
-    setHiddenGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(groupName)) {
-        next.delete(groupName);
-      } else {
-        next.add(groupName);
-      }
-      return next;
-    });
-  }, []);
+    if (response.status === 409) {
+      alert('Email already exists. Please log in instead.');
+      return;
+    }
 
-  const showAllGroups = useCallback(() => setHiddenGroups(new Set()), []);
+    const payload = await response.json();
+    if (!response.ok) {
+      alert(payload.error || 'Failed to register.');
+      return;
+    }
 
-  const saveGraphToCloud = async ({ silent = false } = {}) => {
+    setCurrentUser(payload.user);
+    setPassword('');
+    window.location.assign('/dashboard');
+  };
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    setCurrentUser(null);
+    setPassword('');
+    setAuthMessage('Logged out.');
+    setAuthMessageType('info');
+  };
+
+  const saveGraphToCloud = async () => {
     if (!graphId.trim()) {
       if (!silent) alert('Please enter a graph id.');
       return false;
@@ -258,7 +346,7 @@ function App() {
     }
   };
 
-  const loadGraphFromCloud = async ({ silent = false } = {}) => {
+  const loadGraphFromCloud = async () => {
     if (!graphId.trim()) {
       if (!silent) alert('Please enter a graph id.');
       return false;
@@ -1247,37 +1335,89 @@ function App() {
       />
 
 {/* Modular Control Panels */}
-      <div
-        className={`absolute top-0 left-4 z-[70] w-[620px] max-w-[calc(100vw-2rem)] border border-zinc-500/80 bg-zinc-900/30 text-zinc-100 shadow-2xl backdrop-blur-sm transition-all duration-300 ${showConsole ? 'translate-y-4 opacity-100 pointer-events-auto' : '-translate-y-full opacity-0 pointer-events-none'}`}
-      >
-        <div className="flex items-center justify-between border-b border-zinc-600/80 px-3 py-2">
-          <p className="text-sm font-semibold tracking-wide">Console</p>
-          <button className="text-zinc-300 hover:text-zinc-100" onClick={() => setShowConsole(false)}>×</button>
-        </div>
-        <div className="flex items-center justify-between px-3 py-2 text-xs text-zinc-300">
-          <span>Active graph: <span className="text-zinc-100">{graphId}</span></span>
-          <span className="text-zinc-400">Press <kbd className="rounded border border-zinc-500 px-1">Tab</kbd> to toggle</span>
-        </div>
-        <div className="h-56 overflow-y-auto border-y border-zinc-600/80 bg-black/30 px-3 py-2 font-mono text-xs leading-5">
-          {consoleLines.map((line, idx) => (
-            <div key={`${line}-${idx}`}>{line}</div>
-          ))}
-        </div>
-        <div className="flex gap-2 px-3 py-3">
-          <input
-            className="flex-1 border border-zinc-600 bg-black/30 px-2 py-1 font-mono text-xs text-zinc-100 outline-none focus:border-zinc-300"
-            placeholder="Type command..."
-            value={consoleInput}
-            onChange={(e) => setConsoleInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                submitConsoleCommand();
-              }
-            }}
-          />
-          <button className="border border-zinc-600 bg-zinc-800/60 px-3 text-xs hover:bg-zinc-700/70" onClick={submitConsoleCommand}>Run</button>
-        </div>
-      </div>
+      {showFileOps && (
+        <FloatablePanel
+          id="file-ops-panel"
+          title="File Operations"
+          defaultPosition={{ x: getPanelX("file-ops"), y: 80 }}
+          defaultSize={{ width: window.innerWidth * 0.18, height: 'auto' }}
+          minWidth={250}
+          minHeight={300}
+          onClose={() => setShowFileOps(false)}
+        >
+          <div className="space-y-4">
+            <div className="space-y-2">
+                <Label>Load JSON File</Label>
+                <Input
+                  type="file"
+                  accept=".json"
+                  onChange={(e) => setSelectedFileForLoad(e.target.files[0])}
+                />
+                <Button onClick={handleLoadFile} size="sm" className="w-full">
+                  Load File
+                </Button>
+                {selectedFileForLoad && (
+                  <p className="text-xs text-muted-foreground">
+                    Selected: {selectedFileForLoad.name}
+                  </p>
+                )}
+                
+                <Button onClick={handleNewGraph} variant="outline" size="sm" className="w-full">
+                  New Graph
+                </Button>
+
+                <Separator className="my-3" />
+
+                <Label>Cloud Account</Label>
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use these same fields for both Register and Login. Register signs you in automatically.
+                </p>
+
+                {!currentUser ? (
+                  <div className="space-y-3">
+                    <Button onClick={() => handleAuth('login')} size="sm" className="w-full">Login</Button>
+                    <RegistrationForm onRegistered={(user) => {
+                      setCurrentUser(user);
+                      setEmail(user?.email || '');
+                      setPassword('');
+                    }} />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">Signed in as {currentUser.email}</p>
+                    <Button onClick={handleLogout} size="sm" variant="outline" className="w-full">Logout</Button>
+                  </div>
+                )}
+
+                <Label>Cloud Graph ID</Label>
+                <Input
+                  type="text"
+                  placeholder="default-graph"
+                  value={graphId}
+                  onChange={(e) => setGraphId(e.target.value)}
+                />
+                <Button onClick={loadGraphFromCloud} size="sm" className="w-full" disabled={isLoadingCloud}>
+                  {isLoadingCloud ? 'Loading from Vercel DB...' : 'Load from Vercel DB'}
+                </Button>
+                <Button onClick={saveGraphToCloud} size="sm" className="w-full" disabled={isSavingCloud}>
+                  {isSavingCloud ? 'Saving to Vercel DB...' : 'Save to Vercel DB'}
+                </Button>
+              </div>
+          </div>
+        </FloatablePanel>
+      )}
 
       {showAddNode && (
         <FloatablePanel
