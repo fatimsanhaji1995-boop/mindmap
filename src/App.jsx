@@ -73,6 +73,9 @@ function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
+  const [authMessage, setAuthMessage] = useState('');
+  const [authMessageType, setAuthMessageType] = useState('');
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [graphId, setGraphId] = useState('default-graph');
   const [isSavingCloud, setIsSavingCloud] = useState(false);
   const [isLoadingCloud, setIsLoadingCloud] = useState(false);
@@ -123,6 +126,8 @@ function App() {
         }
         const payload = await response.json();
         setCurrentUser(payload.user);
+        setAuthMessage(`Signed in as ${payload.user.email}`);
+        setAuthMessageType('success');
       } catch {
         setCurrentUser(null);
       }
@@ -207,6 +212,8 @@ function App() {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     setCurrentUser(null);
     setPassword('');
+    setAuthMessage('Logged out.');
+    setAuthMessageType('info');
   };
 
   const saveGraphToCloud = async () => {
