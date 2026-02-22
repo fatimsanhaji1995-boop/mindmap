@@ -33,17 +33,15 @@ Run the schema in `db/schema.sql` against your Postgres database.
 If you want to pre-create or reset a login user in Postgres, run:
 
 ```bash
-DATABASE_URL="your_connection_string" npm run seed:user -- --email=user@example.com --password=123123qw
+DATABASE_URL="postgresql://...-pooler..." npm run seed:user -- --email=user@example.com --password=123123qw
 ```
 
-The script accepts any of these env setups:
+Requirements:
 
-- `DATABASE_URL`
-- `POSTGRES_URL`
-- Raw `PG*` / `POSTGRES_*` parts (`PGHOST`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`, etc.)
+- The script uses `process.env.DATABASE_URL` only.
+- `DATABASE_URL` must be the pooled Neon connection string (it must contain `-pooler`).
 
-This will create the `users` table if needed and upsert the user by email.  
-If your database name is `neondb`, set `PGDATABASE=neondb` (or use a URL that ends with `/neondb`).
+This will create the `users` table if needed and upsert the user by email using your pooled Neon `DATABASE_URL`.
 
 ### Frontend usage
 
