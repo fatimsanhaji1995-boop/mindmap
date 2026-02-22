@@ -7,25 +7,29 @@ function getArg(name) {
   return arg ? arg.slice(prefix.length) : '';
 }
 
-function getDatabaseUrl() {
-  const databaseUrl = process.env.DATABASE_URL;
+function getConnectionString() {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  if (process.env.POSTGRES_URL) return process.env.POSTGRES_URL;
 
-  if (!databaseUrl) {
-    console.error('DATABASE_URL is required.');
-    process.exit(1);
-  }
+  const host = process.env.PGHOST || process.env.POSTGRES_HOST;
+  const user = process.env.PGUSER || process.env.POSTGRES_USER;
+  const password = process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD;
+  const database = process.env.PGDATABASE || process.env.POSTGRES_DATABASE;
 
-  if (!databaseUrl.includes('-pooler')) {
-    console.error('DATABASE_URL must use the Neon pooled connection string (contains "-pooler").');
-    process.exit(1);
-  }
+  if (!host || !user || !password || !database) return '';
 
-  return databaseUrl;
+  const sslmode = process.env.PGSSLMODE || 'require';
+  return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}/${database}?sslmode=${sslmode}`;
 }
 
 const email = (getArg('email') || '').trim().toLowerCase();
 const password = getArg('password') || '';
-const databaseUrl = getDatabaseUrl();
+const connectionString = getConnectionString();
+
+if (!connectionString) {
+  console.error('DATABASE_URL (or POSTGRES_URL / PG* variables) is required.');
+  process.exit(1);
+}
 
 if (!email || !password) {
   console.error('Usage: node scripts/seed-user.mjs --email=user@example.com --password=secret');
@@ -38,8 +42,8 @@ if (password.length < 6) {
 }
 
 const pool = new Pool({
-  connectionString: databaseUrl,
-  ssl: { rejectUnauthorized: false },
+  connectionString,
+  ssl: connectionString.includes('localhost') ? false : { rejectUnauthorized: false },
 });
 
 const createUsersTableSql = `
@@ -64,9 +68,9 @@ try {
     [email, passwordHash],
   );
 
-  console.log('User seeded successfully.');
-} catch {
-  console.error('Failed to seed user.');
+  console.log(`Seeded user ${result.rows[0].email} (id=${result.rows[0].id}).`);
+} catch (error) {
+  console.error('Failed to seed user:', error);
   process.exitCode = 1;
 } finally {
   await pool.end();
