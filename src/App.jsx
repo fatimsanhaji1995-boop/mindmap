@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
 import { Slider } from '@/components/ui/slider.jsx';
 import FloatablePanel from '@/components/FloatablePanel.jsx';
+import RegistrationForm from '@/components/RegistrationForm.jsx';
 import { getDescendants, filterGraphByCollapsedNodes, toggleNodeCollapse, isNodeCollapsed } from '@/lib/collapseUtils';
 import './App.css';
 
@@ -149,20 +150,11 @@ function App() {
 
   const validateAuthInputs = () => {
     if (!email || !password) {
-      setAuthMessage('Please enter both email and password.');
-      setAuthMessageType('error');
+      alert('Please enter both email and password.');
       return false;
     }
 
     return true;
-  };
-
-  const readJsonPayload = async (response) => {
-    try {
-      return await response.json();
-    } catch {
-      return {};
-    }
   };
 
   const handleLogin = async () => {
@@ -170,35 +162,22 @@ function App() {
       return;
     }
 
-    setIsAuthLoading(true);
-    setAuthMessage('Logging in...');
-    setAuthMessageType('info');
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
+    });
 
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      });
-
-      const payload = await readJsonPayload(response);
-      if (!response.ok) {
-        setAuthMessage(payload.error || 'Login failed. Please check your email and password.');
-        setAuthMessageType('error');
-        return;
-      }
-
-      setCurrentUser(payload.user);
-      setPassword('');
-      setAuthMessage(`Login successful. Signed in as ${payload.user.email}.`);
-      setAuthMessageType('success');
-    } catch {
-      setAuthMessage('Network error while logging in.');
-      setAuthMessageType('error');
-    } finally {
-      setIsAuthLoading(false);
+    const payload = await response.json();
+    if (!response.ok) {
+      alert(payload.error || 'Failed to login.');
+      return;
     }
+
+    setCurrentUser(payload.user);
+    setPassword('');
+    alert(`Logged in as ${payload.user.email}`);
   };
 
   const handleRegister = async () => {
@@ -206,41 +185,27 @@ function App() {
       return;
     }
 
-    setIsAuthLoading(true);
-    setAuthMessage('Registering account...');
-    setAuthMessageType('info');
+    const response = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
+    });
 
-    try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (response.status === 409) {
-        setAuthMessage('Email already exists. Please log in instead.');
-        setAuthMessageType('error');
-        return;
-      }
-
-      const payload = await readJsonPayload(response);
-      if (!response.ok) {
-        setAuthMessage(payload.error || 'Registration failed. Please try again.');
-        setAuthMessageType('error');
-        return;
-      }
-
-      setCurrentUser(payload.user);
-      setPassword('');
-      setAuthMessage(`Registration successful. Signed in as ${payload.user.email}.`);
-      setAuthMessageType('success');
-    } catch {
-      setAuthMessage('Network error while registering.');
-      setAuthMessageType('error');
-    } finally {
-      setIsAuthLoading(false);
+    if (response.status === 409) {
+      alert('Email already exists. Please log in instead.');
+      return;
     }
+
+    const payload = await response.json();
+    if (!response.ok) {
+      alert(payload.error || 'Failed to register.');
+      return;
+    }
+
+    setCurrentUser(payload.user);
+    setPassword('');
+    window.location.assign('/dashboard');
   };
 
   const handleLogout = async () => {
@@ -1099,18 +1064,17 @@ function App() {
                   onChange={(e) => setPassword(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Use these same fields for both Register and Login.
+                  Use these same fields for both Register and Login. Register signs you in automatically.
                 </p>
-                {authMessage && (
-                  <p className={`text-xs ${authMessageType === 'error' ? 'text-red-500' : authMessageType === 'success' ? 'text-green-500' : 'text-muted-foreground'}`}>
-                    {authMessage}
-                  </p>
-                )}
 
                 {!currentUser ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button onClick={handleLogin} size="sm" disabled={isAuthLoading}>{isAuthLoading ? 'Working...' : 'Login'}</Button>
-                    <Button onClick={handleRegister} size="sm" variant="outline" disabled={isAuthLoading}>{isAuthLoading ? 'Working...' : 'Register'}</Button>
+                  <div className="space-y-3">
+                    <Button onClick={() => handleAuth('login')} size="sm" className="w-full">Login</Button>
+                    <RegistrationForm onRegistered={(user) => {
+                      setCurrentUser(user);
+                      setEmail(user?.email || '');
+                      setPassword('');
+                    }} />
                   </div>
                 ) : (
                   <div className="space-y-2">
