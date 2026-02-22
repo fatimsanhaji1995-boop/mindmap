@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
 import { Slider } from '@/components/ui/slider.jsx';
 import FloatablePanel from '@/components/FloatablePanel.jsx';
+import RegistrationForm from '@/components/RegistrationForm.jsx';
 import { getDescendants, filterGraphByCollapsedNodes, toggleNodeCollapse, isNodeCollapsed } from '@/lib/collapseUtils';
 import './App.css';
 
@@ -1060,9 +1061,13 @@ function App() {
                 </p>
 
                 {!currentUser ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button onClick={handleLogin} size="sm">Login</Button>
-                    <Button onClick={handleRegister} size="sm" variant="outline">Register</Button>
+                  <div className="space-y-3">
+                    <Button onClick={() => handleAuth('login')} size="sm" className="w-full">Login</Button>
+                    <RegistrationForm onRegistered={(user) => {
+                      setCurrentUser(user);
+                      setEmail(user?.email || '');
+                      setPassword('');
+                    }} />
                   </div>
                 ) : (
                   <div className="space-y-2">
