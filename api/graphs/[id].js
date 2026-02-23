@@ -4,6 +4,37 @@ import { getDb } from '../_lib/db.js';
 const SINGLE_USER_EMAIL = process.env.SINGLE_USER_EMAIL || 'solo@mindmap.local';
 const SINGLE_USER_PASSWORD_HASH = process.env.SINGLE_USER_PASSWORD_HASH || 'single-user-mode';
 
+function normalizeOgSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot !== 'object') {
+    return { nodes: [], links: [] };
+  }
+  const nodes = Array.isArray(snapshot.nodes) ? snapshot.nodes : [];
+  const links = Array.isArray(snapshot.links) ? snapshot.links : [];
+  return {
+    nodes: nodes.map(({ id, x, y, z }) => ({ id, x, y, z })),
+    links: links.map(({ source, target, color, thickness }) => ({
+      source: typeof source === 'object' ? source.id : source,
+      target: typeof target === 'object' ? target.id : target,
+      color,
+      thickness,
+    })),
+  };
+}
+
+function normalizeCameraBookmarks(bookmarks) {
+  if (!Array.isArray(bookmarks)) return [];
+  return bookmarks
+    .filter((b) => b && typeof b === 'object')
+    .map((b, i) => ({
+      name: b.name || `view-${i + 1}`,
+      position: { x: b.position?.x ?? 0, y: b.position?.y ?? 0, z: b.position?.z ?? 400 },
+      lookAt: { x: b.lookAt?.x ?? 0, y: b.lookAt?.y ?? 0, z: b.lookAt?.z ?? 0 },
+      up: { x: b.up?.x ?? 0, y: b.up?.y ?? 1, z: b.up?.z ?? 0 },
+      zoom: b.zoom ?? 1,
+      isOrthographic: Boolean(b.isOrthographic),
+    }));
+}
+
 function normalizeGraph(payload) {
   const nodes = Array.isArray(payload?.nodes) ? payload.nodes : [];
   const links = Array.isArray(payload?.links) ? payload.links : [];

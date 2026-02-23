@@ -248,7 +248,7 @@ function App() {
 
   const validateAuthInputs = () => {
     if (!email || !password) {
-      alert('Please enter both email and password.');
+      appendConsoleLine('Please enter both email and password.');
       return false;
     }
 
@@ -271,25 +271,25 @@ function App() {
       });
 
       if (mode === 'register' && response.status === 409) {
-        alert('Email already exists. Please log in instead.');
+        appendConsoleLine('Email already exists. Please log in instead.');
         return;
       }
 
       const payload = await response.json();
       if (!response.ok) {
-        alert(payload.error || `Failed to ${mode}.`);
+        appendConsoleLine(payload.error || `Failed to ${mode}.`);
         return;
       }
 
       setCurrentUser(payload.user);
       setPassword('');
-      alert(`${mode === 'login' ? 'Logged in' : 'Registered'} as ${payload.user.email}`);
+      appendConsoleLine(`${mode === 'login' ? 'Logged in' : 'Registered'} as ${payload.user.email}`);
       
       if (mode === 'register') {
         window.location.assign('/dashboard');
       }
     } catch (error) {
-      alert(`Network error during ${mode}.`);
+      appendConsoleLine(`Network error during ${mode}.`);
     } finally {
       setIsAuthLoading(false);
     }
@@ -308,7 +308,7 @@ function App() {
 
   const saveGraphToCloud = async ({ silent = false } = {}) => {
     if (!graphId.trim()) {
-      if (!silent) alert('Please enter a graph id.');
+      if (!silent) appendConsoleLine('Please enter a graph id.');
       return false;
     }
 
@@ -329,14 +329,14 @@ function App() {
 
       const payload = await response.json();
       if (!response.ok) {
-        if (!silent) alert(payload.error || 'Failed to save graph to cloud.');
+        if (!silent) appendConsoleLine(payload.error || 'Failed to save graph to cloud.');
         return false;
       }
 
-      if (!silent) alert(`Graph saved to cloud: ${payload.graph.id}`);
+      if (!silent) appendConsoleLine(`Graph saved to cloud: ${payload.graph.id}`);
       return true;
     } catch {
-      if (!silent) alert('Network error while saving graph.');
+      if (!silent) appendConsoleLine('Network error while saving graph.');
       return false;
     } finally {
       setIsSavingCloud(false);
@@ -345,7 +345,7 @@ function App() {
 
   const loadGraphFromCloud = async ({ silent = false } = {}) => {
     if (!graphId.trim()) {
-      if (!silent) alert('Please enter a graph id.');
+      if (!silent) appendConsoleLine('Please enter a graph id.');
       return false;
     }
 
@@ -357,7 +357,7 @@ function App() {
       });
       const payload = await response.json();
       if (!response.ok) {
-        if (!silent) alert(payload.error || 'Failed to load graph from cloud.');
+        if (!silent) appendConsoleLine(payload.error || 'Failed to load graph from cloud.');
         return false;
       }
 
@@ -365,10 +365,10 @@ function App() {
       setGraphData(normalized);
       setRecordedOGPositions(normalizeOGSnapshot(payload.graph.data?.ogSnapshot));
       setCameraBookmarks(normalizeCameraBookmarks(payload.graph.data?.cameraBookmarks));
-      if (!silent) alert(`Loaded graph ${payload.graph.id} from cloud.`);
+      if (!silent) appendConsoleLine(`Loaded graph ${payload.graph.id} from cloud.`);
       return true;
     } catch {
-      if (!silent) alert('Network error while loading graph.');
+      if (!silent) appendConsoleLine('Network error while loading graph.');
       return false;
     } finally {
       setIsLoadingCloud(false);
@@ -377,7 +377,7 @@ function App() {
 
   const handleLoadFile = () => {
     if (!selectedFileForLoad) {
-      alert('Please select a JSON file first');
+      appendConsoleLine('Please select a JSON file first');
       return;
     }
 
@@ -388,11 +388,11 @@ function App() {
 
         const normalizedData = normalizeGraphData(data);
         setGraphData(normalizedData);
-        alert(`Loaded ${normalizedData.nodes.length} nodes and ${normalizedData.links.length} links successfully!`);
+        appendConsoleLine(`Loaded ${normalizedData.nodes.length} nodes and ${normalizedData.links.length} links successfully!`);
         setSelectedFileForLoad(null);
       } catch (error) {
         console.error('Error parsing JSON file:', error);
-        alert('Error parsing JSON file. Please ensure it is valid JSON.');
+        appendConsoleLine('Error parsing JSON file. Please ensure it is valid JSON.');
       }
     };
     reader.readAsText(selectedFileForLoad);
@@ -403,9 +403,9 @@ function App() {
     setSelectedFileForLoad(null);
   };
 
-  const appendConsoleLine = (line) => {
+  const appendConsoleLine = useCallback((line) => {
     setConsoleLines((prev) => [...prev, line].slice(-120));
-  };
+  }, []);
 
   const fetchGraphCatalog = async () => {
     const response = await fetch('/api/graphs', { method: 'GET', credentials: 'include' });
@@ -424,7 +424,8 @@ function App() {
     }
 
     appendConsoleLine(`] ${command}`);
-    const [action, ...rest] = command.split(/\s+/);
+    const [rawAction, ...rest] = command.split(/\s+/);
+    const action = rawAction.toLowerCase();
 
     if (action === 'help') {
       appendConsoleLine('Commands: help, clear, new, set <graphId>, save, load, list, groups list|hide|show|toggle|showall, og record|save|load, camera capture|list|load|delete|save|sync, focus, collapse, zoomout, toggle <panel>.');
@@ -483,7 +484,7 @@ function App() {
     }
 
     if (action === 'groups') {
-      const sub = rest[0];
+      const sub = rest[0]?.toLowerCase();
       const groupName = rest.slice(1).join(' ').trim();
 
       if (!sub || sub === 'list') {
@@ -542,7 +543,7 @@ function App() {
     }
 
     if (action === 'og') {
-      const sub = rest[0];
+      const sub = rest[0]?.toLowerCase();
       if (sub === 'record') {
         recordOGPositions();
         appendConsoleLine('Recorded OG snapshot from current fixed node positions.');
@@ -564,7 +565,7 @@ function App() {
 
 
     if (action === 'camera') {
-      const sub = rest[0];
+      const sub = rest[0]?.toLowerCase();
       const arg = rest.slice(1).join(' ').trim();
 
       if (sub === 'capture') {
@@ -736,13 +737,13 @@ function App() {
   const saveOGToDatabase = async ({ silent = false } = {}) => {
     const hasSnapshot = recordedOGPositions.nodes.length > 0 || recordedOGPositions.links.length > 0;
     if (!hasSnapshot) {
-      if (!silent) alert('No OG positions to save. Please record OG positions first.');
+      if (!silent) appendConsoleLine('No OG positions to save. Please record OG positions first.');
       return false;
     }
 
     const ok = await saveGraphToCloud({ silent });
     if (ok && !silent) {
-      alert(`OG snapshot saved to database for graph: ${graphId}`);
+      appendConsoleLine(`OG snapshot saved to database for graph: ${graphId}`);
     }
 
     return ok;
@@ -750,7 +751,7 @@ function App() {
 
   const loadOGFromDatabase = async ({ silent = false } = {}) => {
     if (!graphId.trim()) {
-      if (!silent) alert('Please enter a graph id.');
+      if (!silent) appendConsoleLine('Please enter a graph id.');
       return false;
     }
 
@@ -761,20 +762,20 @@ function App() {
       });
       const payload = await response.json();
       if (!response.ok) {
-        if (!silent) alert(payload.error || 'Failed to load OG snapshot from database.');
+        if (!silent) appendConsoleLine(payload.error || 'Failed to load OG snapshot from database.');
         return false;
       }
 
       const applied = applyOGSnapshotToGraph(payload.graph.data?.ogSnapshot);
       if (!applied) {
-        if (!silent) alert(`No OG snapshot saved for graph ${payload.graph.id}.`);
+        if (!silent) appendConsoleLine(`No OG snapshot saved for graph ${payload.graph.id}.`);
         return false;
       }
 
-      if (!silent) alert(`Loaded OG snapshot from database for graph: ${payload.graph.id}`);
+      if (!silent) appendConsoleLine(`Loaded OG snapshot from database for graph: ${payload.graph.id}`);
       return true;
     } catch {
-      if (!silent) alert('Network error while loading OG snapshot.');
+      if (!silent) appendConsoleLine('Network error while loading OG snapshot.');
       return false;
     }
   };
@@ -787,7 +788,7 @@ function App() {
 
   const addLink = () => {
     if (selectedNodes.length !== 2 || !selectedNodes[0] || !selectedNodes[1]) {
-      alert("Please select both source and target nodes to create a link.");
+      appendConsoleLine("Please select both source and target nodes to create a link.");
       return;
     }
 
@@ -798,7 +799,7 @@ function App() {
       const linkTarget = typeof link.target === 'object' ? link.target.id : link.target;
       return (linkSource === source && linkTarget === target) || (linkSource === target && linkTarget === source);
     })) {
-      alert("Link between these two nodes already exists.");
+      appendConsoleLine("Link between these two nodes already exists.");
       return;
     }
 
@@ -824,7 +825,7 @@ function App() {
 
   const pullNodeCloser = () => {
     if (!selectedNodeForEdit || !selectedNodeToPull) {
-      alert("Please select a target node");
+      appendConsoleLine("Please select a target node");
       return;
     }
 
@@ -832,7 +833,7 @@ function App() {
     const targetNode = graphData.nodes.find(n => n.id === selectedNodeToPull);
 
     if (!nodeToMove || !targetNode) {
-      alert("Could not find selected nodes");
+      appendConsoleLine("Could not find selected nodes");
       return;
     }
 
@@ -860,7 +861,7 @@ function App() {
     // Update the selected node for edit to reflect new position
     setSelectedNodeForEdit(prev => ({ ...prev, x: newX, y: newY, z: newZ, fx: newX, fy: newY, fz: newZ }));
 
-    alert(`Moved ${selectedNodeForEdit.id} ${pullDistance}% closer to ${selectedNodeToPull}`);
+    appendConsoleLine(`Moved ${selectedNodeForEdit.id} ${pullDistance}% closer to ${selectedNodeToPull}`);
   };
 
   const addNode = () => {
@@ -869,11 +870,11 @@ function App() {
     const cameraDir = camera.getWorldDirection(new THREE.Vector3());
 
     if (!newNodeId.trim()) {
-      alert('Please enter a node ID');
+      appendConsoleLine('Please enter a node ID');
       return;
     }
     if (graphData.nodes.find(node => node.id === newNodeId.trim())) {
-      alert('Node with this ID already exists');
+      appendConsoleLine('Node with this ID already exists');
       return;
     }
 
@@ -955,7 +956,7 @@ function App() {
 
   const deleteNode = (nodeId) => {
     if (!nodeId) {
-      alert('Please select a node to delete');
+      appendConsoleLine('Please select a node to delete');
       return;
     }
 
@@ -983,7 +984,7 @@ function App() {
     // Remove from selected nodes array if present
     setSelectedNodes(prev => prev.filter(id => id !== nodeId));
 
-    alert(`Node ${nodeId} and its connected links have been deleted successfully!`);
+    appendConsoleLine(`Node ${nodeId} and its connected links have been deleted successfully!`);
   };
 
   const recordOGPositions = () => {
@@ -1000,7 +1001,7 @@ function App() {
       thickness: link.thickness,
     }));
     setRecordedOGPositions({ nodes: fixedPositions, links: recordedLinks });
-    alert(`Recorded ${fixedPositions.length} fixed node positions and ${recordedLinks.length} links for OG mode!`);
+    appendConsoleLine(`Recorded ${fixedPositions.length} fixed node positions and ${recordedLinks.length} links for OG mode!`);
   };
 
   const onNodeDragEnd = useCallback(node => {
@@ -1044,9 +1045,9 @@ function App() {
         color: selectedNodeForEdit.color,
         textSize: selectedNodeForEdit.textSize,
       });
-      alert(`Style of node ${selectedNodeForEdit.id} copied!`);
+      appendConsoleLine(`Style of node ${selectedNodeForEdit.id} copied!`);
     } else {
-      alert("No node selected to copy style from.");
+      appendConsoleLine("No node selected to copy style from.");
     }
   }, [selectedNodeForEdit]);
 
@@ -1061,11 +1062,11 @@ function App() {
         )
       }));
       setSelectedNodeForEdit(prev => ({ ...prev, ...copiedNodeStyle }));
-      alert(`Style applied to node ${selectedNodeForEdit.id}!`);
+      appendConsoleLine(`Style applied to node ${selectedNodeForEdit.id}!`);
     } else if (!copiedNodeStyle) {
-      alert("No node style copied yet.");
+      appendConsoleLine("No node style copied yet.");
     } else {
-      alert("No node selected to apply style to.");
+      appendConsoleLine("No node selected to apply style to.");
     }
   }, [selectedNodeForEdit, copiedNodeStyle]);
 
@@ -1075,9 +1076,9 @@ function App() {
         color: selectedLinkForEdit.color,
         thickness: selectedLinkForEdit.thickness,
       });
-      alert(`Style of link ${typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source} -> ${typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target} copied!`);
+      appendConsoleLine(`Style of link ${typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source} -> ${typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target} copied!`);
     } else {
-      alert("No link selected to copy style from.");
+      appendConsoleLine("No link selected to copy style from.");
     }
   }, [selectedLinkForEdit]);
 
@@ -1097,11 +1098,11 @@ function App() {
         })
       }));
       setSelectedLinkForEdit(prev => ({ ...prev, ...copiedLinkStyle }));
-      alert(`Style applied to link ${typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source} -> ${typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target}!`);
+      appendConsoleLine(`Style applied to link ${typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source} -> ${typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target}!`);
     } else if (!copiedLinkStyle) {
-      alert("No link style copied yet.");
+      appendConsoleLine("No link style copied yet.");
     } else {
-      alert("No link selected to apply style to.");
+      appendConsoleLine("No link selected to apply style to.");
     }
   }, [selectedLinkForEdit, copiedLinkStyle]);
 
@@ -1507,7 +1508,7 @@ function App() {
                           deleteNode(selectedNodeForEdit.id);
                         }
                       } else {
-                        alert('Please select a node to delete');
+                        appendConsoleLine('Please select a node to delete');
                       }
                     }} 
                     size="sm" 
@@ -1590,7 +1591,7 @@ function App() {
                               if (selectedNodes.length === 2 && selectedNodes[0] && selectedNodes[1]) {
                                 addLink();
                               } else {
-                                alert("Please select both source and target nodes");
+                                appendConsoleLine("Please select both source and target nodes");
                               }
                             }} 
                             size="sm" 
