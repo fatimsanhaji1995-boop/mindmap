@@ -988,7 +988,24 @@ function App() {
   };
 
   const recordOGPositions = () => {
-    const fixedPositions = graphData.nodes.filter(node => node.fx !== null && node.fy !== null && node.fz !== null).map(node => ({
+    // If no nodes are fixed, fix them all at their current positions first
+    const anyFixed = graphData.nodes.some(node => node.fx !== undefined && node.fx !== null);
+    
+    let nodesToRecord = graphData.nodes;
+    if (!anyFixed) {
+      setGraphData(prev => ({
+        ...prev,
+        nodes: prev.nodes.map(node => ({
+          ...node,
+          fx: node.x,
+          fy: node.y,
+          fz: node.z
+        }))
+      }));
+      nodesToRecord = graphData.nodes.map(node => ({ ...node, fx: node.x, fy: node.y, fz: node.z }));
+    }
+
+    const fixedPositions = nodesToRecord.filter(node => node.fx !== undefined && node.fx !== null).map(node => ({
       id: node.id,
       x: node.fx,
       y: node.fy,
