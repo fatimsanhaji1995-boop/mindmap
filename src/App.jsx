@@ -1559,7 +1559,13 @@ function App() {
             sprite.borderColor = '#FFA500';
             sprite.textHeight = node.textSize || 10;
           } else {
-            sprite.color = node.color || 'white';
+            const c = node.color || '#00ff41';
+            sprite.color = c;
+            sprite.backgroundColor = 'rgba(0, 4, 2, 0.82)';
+            sprite.padding = 3;
+            sprite.borderRadius = 0;
+            sprite.borderWidth = 0.6;
+            sprite.borderColor = c;
             sprite.textHeight = node.textSize || 6;
           }
           return sprite;
