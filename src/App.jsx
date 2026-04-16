@@ -15,12 +15,21 @@ import RegistrationForm from '@/components/RegistrationForm.jsx';
 import { getDescendants, filterGraphByCollapsedNodes, toggleNodeCollapse, isNodeCollapsed } from '@/lib/collapseUtils';
 import './App.css';
 
+const LINK_TYPES = {
+  wire:   { label: 'Wire',   color: '#F0F0F0', width: 1,   particles: 0, particleSpeed: 0,     particleWidth: 0, particleColor: '#ffffff' },
+  stream: { label: 'Stream', color: '#00ffff', width: 1.5, particles: 3, particleSpeed: 0.004, particleWidth: 2, particleColor: '#00ffff' },
+  pulse:  { label: 'Pulse',  color: '#ff00cc', width: 3,   particles: 6, particleSpeed: 0.009, particleWidth: 3, particleColor: '#ff00cc' },
+  ghost:  { label: 'Ghost',  color: '#334455', width: 0.4, particles: 0, particleSpeed: 0,     particleWidth: 0, particleColor: '#334455' },
+};
+
 function App() {
   const graphRef = useRef();
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [newNodeId, setNewNodeId] = useState('');
   const [newNodeGroup, setNewNodeGroup] = useState('general');
   const [connectedNodeId, setConnectedNodeId] = useState('');
+  const [connectedLinkType, setConnectedLinkType] = useState('wire');
+  const [newLinkType, setNewLinkType] = useState('wire');
   const [selectedNodes, setSelectedNodes] = useState([]);
   const [recordedOGPositions, setRecordedOGPositions] = useState({ nodes: [], links: [] });
   const [showControls, setShowControls] = useState(false);
@@ -107,11 +116,12 @@ function App() {
     nodes: graphData.nodes.map(({ id, color, textSize, group, x, y, z }) => ({
       id, color, textSize, group, x, y, z,
     })),
-    links: graphData.links.map(({ source, target, color, thickness }) => ({
+    links: graphData.links.map(({ source, target, color, thickness, linkType }) => ({
       source: typeof source === 'object' ? source.id : source,
       target: typeof target === 'object' ? target.id : target,
       color,
       thickness,
+      linkType,
     })),
   }), [graphData]);
 
@@ -931,11 +941,13 @@ function App() {
       return;
     }
 
+    const lt = LINK_TYPES[newLinkType] || LINK_TYPES.wire;
     const newLink = {
       source,
       target,
-      color: 'rgba(240, 240, 240, 1)',
-      thickness: 1,
+      color: lt.color,
+      thickness: lt.width,
+      linkType: newLinkType,
     };
 
     setGraphData(prev => ({
@@ -1098,8 +1110,9 @@ function App() {
       z: (parent?.z || 0) + Math.sin(angle) * Math.cos(elevation) * offset,
     };
 
+    const lt = LINK_TYPES[connectedLinkType] || LINK_TYPES.wire;
     const newNode = { id: newId, color: '#1A75FF', textSize: 6, group: selectedNodeForEdit.group, ...pos, fx: pos.x, fy: pos.y, fz: pos.z };
-    const newLink = { source: selectedNodeForEdit.id, target: newId, color: '#F0F0F0', thickness: 1 };
+    const newLink = { source: selectedNodeForEdit.id, target: newId, color: lt.color, thickness: lt.width, linkType: connectedLinkType };
 
     setGraphData(prev => ({
       nodes: [...prev.nodes, newNode],
@@ -1480,26 +1493,19 @@ function App() {
           sprite.textHeight = node.textSize || 6;
           return sprite;
         }}
-        linkWidth={link => link.thickness || 1}
+        linkWidth={link => {
+          const lt = LINK_TYPES[link.linkType] || LINK_TYPES.wire;
+          return link.thickness ?? lt.width;
+        }}
         linkOpacity={1}
         linkColor={link => {
-          const color = link.color || '#F0F0F0';
-          // Force full opacity for all links
-          if (color.startsWith('#')) {
-            const hex = color.slice(1);
-            const r = parseInt(hex.substring(0, 2), 16);
-            const g = parseInt(hex.substring(2, 4), 16);
-            const b = parseInt(hex.substring(4, 6), 16);
-            return `rgba(${r}, ${g}, ${b}, 1)`;
-          } else if (color.startsWith('rgb(')) {
-            const parts = color.match(/\d+/g);
-            return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, 1)`;
-          } else if (color.startsWith('rgba(')) {
-            const parts = color.match(/\d+/g);
-            return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, 1)`;
-          }
-          return 'rgba(240, 240, 240, 1)'; // Default fallback to opaque white
+          const lt = LINK_TYPES[link.linkType] || LINK_TYPES.wire;
+          return link.color || lt.color;
         }}
+        linkDirectionalParticles={link => (LINK_TYPES[link.linkType] || LINK_TYPES.wire).particles}
+        linkDirectionalParticleSpeed={link => (LINK_TYPES[link.linkType] || LINK_TYPES.wire).particleSpeed}
+        linkDirectionalParticleWidth={link => (LINK_TYPES[link.linkType] || LINK_TYPES.wire).particleWidth}
+        linkDirectionalParticleColor={link => (LINK_TYPES[link.linkType] || LINK_TYPES.wire).particleColor}
         onNodeClick={handleNodeClick}
         onLinkClick={handleLinkClick}
         onNodeDragEnd={onNodeDragEnd}
@@ -1759,16 +1765,27 @@ function App() {
                             </SelectContent>
                           </Select>
                         </div>
+                        <div className="space-y-2">
+                          <Label>Link Type</Label>
+                          <Select value={newLinkType} onValueChange={setNewLinkType}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(LINK_TYPES).map(([key, val]) => (
+                                <SelectItem key={key} value={key}>{val.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <div className="flex flex-col gap-2">
-                          <Button 
+                          <Button
                             onClick={() => {
                               if (selectedNodes.length === 2 && selectedNodes[0] && selectedNodes[1]) {
                                 addLink();
                               } else {
                                 appendConsoleLine("Please select both source and target nodes");
                               }
-                            }} 
-                            size="sm" 
+                            }}
+                            size="sm"
                             className="w-full"
                             disabled={!selectedNodes[0] || !selectedNodes[1]}
                           >
@@ -1880,6 +1897,14 @@ function App() {
                 onChange={(e) => setConnectedNodeId(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') addConnectedNode(); }}
               />
+              <Select value={connectedLinkType} onValueChange={setConnectedLinkType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(LINK_TYPES).map(([key, val]) => (
+                    <SelectItem key={key} value={key}>{val.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button onClick={addConnectedNode} size="sm" className="w-full" disabled={!connectedNodeId.trim()}>
                 + Create &amp; Link
               </Button>
@@ -1900,6 +1925,30 @@ function App() {
           <div className="space-y-4">
             <div className="text-sm font-medium">
               {typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source} → {typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target}
+            </div>
+            <div className="space-y-1">
+              <Label>Link Type</Label>
+              <Select
+                value={selectedLinkForEdit.linkType || 'wire'}
+                onValueChange={(val) => {
+                  const lt = LINK_TYPES[val] || LINK_TYPES.wire;
+                  const sSourceId = typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source;
+                  const sTargetId = typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target;
+                  setGraphData(prev => ({...prev, links: prev.links.map(l => {
+                    const lSourceId = typeof l.source === 'object' ? l.source.id : l.source;
+                    const lTargetId = typeof l.target === 'object' ? l.target.id : l.target;
+                    return (lSourceId === sSourceId && lTargetId === sTargetId) ? { ...l, linkType: val, color: lt.color, thickness: lt.width } : l;
+                  })}));
+                  setSelectedLinkForEdit(prev => ({ ...prev, linkType: val, color: lt.color, thickness: lt.width }));
+                }}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(LINK_TYPES).map(([key, v]) => (
+                    <SelectItem key={key} value={key}>{v.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
               <Label>Color</Label>
