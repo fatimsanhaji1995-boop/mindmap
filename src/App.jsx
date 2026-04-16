@@ -84,6 +84,7 @@ function App() {
   ]);
   const [hiddenGroups, setHiddenGroups] = useState(new Set());
   const autoRotateRef = useRef(null);
+  const consoleOutputRef = useRef(null);
 
   const normalizeGraphData = useCallback((data) => ({
     nodes: (data.nodes || []).map(node => ({
@@ -407,6 +408,12 @@ function App() {
     setConsoleLines((prev) => [...prev, line].slice(-120));
   }, []);
 
+  useEffect(() => {
+    if (consoleOutputRef.current) {
+      consoleOutputRef.current.scrollTop = consoleOutputRef.current.scrollHeight;
+    }
+  }, [consoleLines]);
+
   const fetchGraphCatalog = async () => {
     const response = await fetch('/api/graphs', { method: 'GET', credentials: 'include' });
     const payload = await response.json();
@@ -416,6 +423,91 @@ function App() {
 
     return payload.graphs || [];
   };
+
+  const handleTabCompletion = useCallback(async () => {
+    const input = consoleInput;
+    const trimmed = input.trimStart();
+    const parts = trimmed.split(/\s+/);
+    const trailingSpace = input.endsWith(' ');
+    const action = parts[0]?.toLowerCase() || '';
+
+    const ALL_COMMANDS = ['help', 'clear', 'new', 'set', 'save', 'load', 'list', 'groups', 'og', 'camera', 'zoomout', 'focus', 'collapse', 'toggle'];
+
+    let candidates = [];
+    let prefix = '';
+    let baseInput = '';
+
+    if (parts.length === 1 && !trailingSpace) {
+      prefix = action;
+      baseInput = '';
+      candidates = ALL_COMMANDS.filter(c => c.startsWith(prefix));
+    } else if (action === 'camera') {
+      const CAMERA_SUBS = ['capture', 'list', 'load', 'delete', 'save', 'sync'];
+      if (parts.length === 1 && trailingSpace) {
+        baseInput = 'camera '; candidates = CAMERA_SUBS;
+      } else if (parts.length === 2 && !trailingSpace) {
+        prefix = parts[1].toLowerCase(); baseInput = 'camera ';
+        candidates = CAMERA_SUBS.filter(s => s.startsWith(prefix));
+      } else if (parts.length >= 2 && (parts[1] === 'load' || parts[1] === 'delete')) {
+        prefix = trailingSpace ? '' : parts.slice(2).join(' ');
+        baseInput = `camera ${parts[1]} `;
+        candidates = cameraBookmarks.map(b => b.name).filter(n => n.startsWith(prefix));
+      }
+    } else if (action === 'groups') {
+      const GROUPS_SUBS = ['list', 'hide', 'show', 'toggle', 'showall'];
+      if (parts.length === 1 && trailingSpace) {
+        baseInput = 'groups '; candidates = GROUPS_SUBS;
+      } else if (parts.length === 2 && !trailingSpace) {
+        prefix = parts[1].toLowerCase(); baseInput = 'groups ';
+        candidates = GROUPS_SUBS.filter(s => s.startsWith(prefix));
+      } else if (parts.length >= 2 && ['hide', 'show', 'toggle'].includes(parts[1])) {
+        prefix = trailingSpace ? '' : parts.slice(2).join(' ');
+        baseInput = `groups ${parts[1]} `;
+        candidates = groupNames.filter(n => n.startsWith(prefix));
+      }
+    } else if (action === 'og') {
+      const OG_SUBS = ['record', 'save', 'load'];
+      if (parts.length === 1 && trailingSpace) {
+        baseInput = 'og '; candidates = OG_SUBS;
+      } else if (parts.length === 2 && !trailingSpace) {
+        prefix = parts[1].toLowerCase(); baseInput = 'og ';
+        candidates = OG_SUBS.filter(s => s.startsWith(prefix));
+      }
+    } else if (action === 'toggle') {
+      const PANELS = ['add-node', 'delete-node', 'add-link', 'controls'];
+      if (parts.length === 1 && trailingSpace) {
+        baseInput = 'toggle '; candidates = PANELS;
+      } else if (parts.length === 2 && !trailingSpace) {
+        prefix = parts[1].toLowerCase(); baseInput = 'toggle ';
+        candidates = PANELS.filter(p => p.startsWith(prefix));
+      }
+    } else if (action === 'set' || action === 'load') {
+      prefix = (parts.length === 2 && !trailingSpace) ? parts[1] : '';
+      baseInput = `${action} `;
+      if (parts.length <= 2) {
+        try {
+          const graphs = await fetchGraphCatalog();
+          candidates = graphs.map(g => g.id).filter(id => id.startsWith(prefix));
+        } catch (e) {}
+      }
+    }
+
+    if (candidates.length === 0) return;
+
+    if (candidates.length === 1) {
+      setConsoleInput(baseInput + candidates[0]);
+    } else {
+      appendConsoleLine(`  ${candidates.join('   ')}`);
+      const commonPrefix = candidates.reduce((acc, c) => {
+        let i = 0;
+        while (i < acc.length && i < c.length && acc[i] === c[i]) i++;
+        return acc.slice(0, i);
+      });
+      if (commonPrefix.length > prefix.length) {
+        setConsoleInput(baseInput + commonPrefix);
+      }
+    }
+  }, [consoleInput, cameraBookmarks, groupNames, appendConsoleLine]);
 
   const runConsoleCommand = async (rawCommand) => {
     const command = rawCommand.trim();
@@ -1814,7 +1906,7 @@ function App() {
           <span>Active graph: <span className="text-zinc-100">{graphId}</span></span>
           <span className="text-zinc-400">Press <kbd className="rounded border border-zinc-500 px-1">Tab</kbd> to toggle</span>
         </div>
-        <div className="h-96 overflow-y-auto border-y border-zinc-600/80 bg-black/30 px-3 py-2 font-mono text-4xl leading-tight custom-scrollbar">
+        <div ref={consoleOutputRef} className="h-96 overflow-y-auto border-y border-zinc-600/80 bg-black/30 px-3 py-2 font-mono text-4xl leading-tight custom-scrollbar">
           {consoleLines.map((line, idx) => (
             <div key={`${line}-${idx}`} className="whitespace-pre-wrap break-all" style={{ color: '#00ff41', textShadow: '0 0 8px #00ff41, 0 0 16px #00ff41' }}>{line}</div>
           ))}
@@ -1829,6 +1921,9 @@ function App() {
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 submitConsoleCommand();
+              } else if (e.key === 'Tab') {
+                e.preventDefault();
+                handleTabCompletion();
               }
             }}
           />
