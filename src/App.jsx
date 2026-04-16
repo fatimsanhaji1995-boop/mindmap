@@ -1778,14 +1778,15 @@ function App() {
           <span>Active graph: <span className="text-zinc-100">{graphId}</span></span>
           <span className="text-zinc-400">Press <kbd className="rounded border border-zinc-500 px-1">Tab</kbd> to toggle</span>
         </div>
-        <div className="h-96 overflow-y-auto border-y border-zinc-600/80 bg-black/30 px-3 py-2 font-mono text-xs leading-5 custom-scrollbar">
+        <div className="h-96 overflow-y-auto border-y border-zinc-600/80 bg-black/30 px-3 py-2 font-mono text-4xl leading-tight custom-scrollbar">
           {consoleLines.map((line, idx) => (
-            <div key={`${line}-${idx}`} className="whitespace-pre-wrap break-all text-zinc-300">{line}</div>
+            <div key={`${line}-${idx}`} className="whitespace-pre-wrap break-all" style={{ color: '#00ff41', textShadow: '0 0 8px #00ff41, 0 0 16px #00ff41' }}>{line}</div>
           ))}
         </div>
         <div className="flex gap-2 px-3 py-3">
           <input
-            className="flex-1 border border-zinc-600 bg-black/30 px-2 py-1 font-mono text-xs text-zinc-100 outline-none focus:border-zinc-300"
+            className="flex-1 border border-zinc-600 bg-black/30 px-2 py-1 font-mono text-4xl outline-none focus:border-green-400"
+            style={{ color: '#00ff41', textShadow: '0 0 6px #00ff41' }}
             placeholder="Type command..."
             value={consoleInput}
             onChange={(e) => setConsoleInput(e.target.value)}
