@@ -16,6 +16,65 @@ import RegistrationForm from '@/components/RegistrationForm.jsx';
 import { getDescendants, filterGraphByCollapsedNodes, toggleNodeCollapse, isNodeCollapsed } from '@/lib/collapseUtils';
 import './App.css';
 
+// Creates a THREE.Sprite with neon glow — same visual as the console text-shadow
+const _spriteCache = new Map();
+function makeCyberpunkSprite(text, color = '#00ff41', textHeight = 6) {
+  const cacheKey = `${text}||${color}||${textHeight}`;
+  if (_spriteCache.has(cacheKey)) return _spriteCache.get(cacheKey).clone();
+
+  const fontSize = 52;
+  const font = `bold ${fontSize}px "Courier New", monospace`;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.font = font;
+  const textW = Math.ceil(ctx.measureText(text).width);
+  const pad = 22;
+  canvas.width  = textW + pad * 2;
+  canvas.height = fontSize + pad * 2;
+  ctx.font = font;
+
+  // Dark background
+  ctx.fillStyle = 'rgba(0, 3, 1, 0.88)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Border with glow
+  ctx.shadowColor = color;
+  ctx.shadowBlur  = 10;
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = 1.8;
+  ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+
+  const tx = pad;
+  const ty = fontSize + pad * 0.55;
+
+  // Outer glow pass
+  ctx.shadowBlur  = 24;
+  ctx.shadowColor = color;
+  ctx.fillStyle   = color;
+  ctx.globalAlpha = 0.45;
+  ctx.fillText(text, tx, ty);
+
+  // Mid glow pass
+  ctx.shadowBlur  = 12;
+  ctx.globalAlpha = 0.65;
+  ctx.fillText(text, tx, ty);
+
+  // Sharp crisp text on top
+  ctx.shadowBlur  = 5;
+  ctx.globalAlpha = 1;
+  ctx.fillText(text, tx, ty);
+
+  const texture  = new THREE.CanvasTexture(canvas);
+  const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false });
+  const sprite   = new THREE.Sprite(material);
+  const aspect   = canvas.width / canvas.height;
+  const h        = textHeight * 2.2;
+  sprite.scale.set(aspect * h, h, 1);
+
+  _spriteCache.set(cacheKey, sprite);
+  return sprite.clone();
+}
+
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const QUARTER_MONTHS = { full:[0,1,2,3,4,5,6,7,8,9,10,11], Q1:[0,1,2], Q2:[3,4,5], Q3:[6,7,8], Q4:[9,10,11] };
 
@@ -1549,26 +1608,18 @@ function App() {
         nodeLabel="id"
         nodeAutoColorBy="group"
         nodeThreeObject={node => {
-          const sprite = new SpriteText(node.id);
           if (node.nodeType === 'timeline') {
-            sprite.color = '#000000';
+            const sprite = new SpriteText(node.id);
+            sprite.color           = '#000000';
             sprite.backgroundColor = '#FFD700';
-            sprite.padding = 4;
-            sprite.borderRadius = 4;
-            sprite.borderWidth = 1;
-            sprite.borderColor = '#FFA500';
-            sprite.textHeight = node.textSize || 10;
-          } else {
-            const c = node.color || '#00ff41';
-            sprite.color = c;
-            sprite.backgroundColor = 'rgba(0, 4, 2, 0.82)';
-            sprite.padding = 3;
-            sprite.borderRadius = 0;
-            sprite.borderWidth = 0.6;
-            sprite.borderColor = c;
-            sprite.textHeight = node.textSize || 6;
+            sprite.padding         = 4;
+            sprite.borderRadius    = 0;
+            sprite.borderWidth     = 1.5;
+            sprite.borderColor     = '#FFA500';
+            sprite.textHeight      = node.textSize || 10;
+            return sprite;
           }
-          return sprite;
+          return makeCyberpunkSprite(node.id, node.color || '#00ff41', node.textSize || 6);
         }}
         linkWidth={link => {
           const lt = LINK_TYPES[link.linkType] || LINK_TYPES.wire;
