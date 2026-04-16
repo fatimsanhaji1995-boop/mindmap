@@ -1768,7 +1768,7 @@ function App() {
         </FloatablePanel>
       )}
       <div
-        className={`absolute top-0 left-4 z-[70] w-[620px] max-w-[calc(100vw-2rem)] border border-zinc-500/80 bg-zinc-900/30 text-zinc-100 shadow-2xl backdrop-blur-sm transition-all duration-300 ${showConsole ? 'translate-y-4 opacity-100 pointer-events-auto' : '-translate-y-full opacity-0 pointer-events-none'}`}
+        className={`absolute top-0 left-4 z-[70] w-[900px] max-w-[calc(100vw-2rem)] border border-zinc-500/80 bg-zinc-900/30 text-zinc-100 shadow-2xl backdrop-blur-sm transition-all duration-300 ${showConsole ? 'translate-y-4 opacity-100 pointer-events-auto' : '-translate-y-full opacity-0 pointer-events-none'}`}
       >
         <div className="flex items-center justify-between border-b border-zinc-600/80 px-3 py-2">
           <p className="text-sm font-semibold tracking-wide">Console</p>
@@ -1778,7 +1778,7 @@ function App() {
           <span>Active graph: <span className="text-zinc-100">{graphId}</span></span>
           <span className="text-zinc-400">Press <kbd className="rounded border border-zinc-500 px-1">Tab</kbd> to toggle</span>
         </div>
-        <div className="h-56 overflow-y-auto border-y border-zinc-600/80 bg-black/30 px-3 py-2 font-mono text-xs leading-5 custom-scrollbar">
+        <div className="h-96 overflow-y-auto border-y border-zinc-600/80 bg-black/30 px-3 py-2 font-mono text-xs leading-5 custom-scrollbar">
           {consoleLines.map((line, idx) => (
             <div key={`${line}-${idx}`} className="whitespace-pre-wrap break-all text-zinc-300">{line}</div>
           ))}
