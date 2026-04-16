@@ -15,6 +15,9 @@ import RegistrationForm from '@/components/RegistrationForm.jsx';
 import { getDescendants, filterGraphByCollapsedNodes, toggleNodeCollapse, isNodeCollapsed } from '@/lib/collapseUtils';
 import './App.css';
 
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const QUARTER_MONTHS = { full:[0,1,2,3,4,5,6,7,8,9,10,11], Q1:[0,1,2], Q2:[3,4,5], Q3:[6,7,8], Q4:[9,10,11] };
+
 const LINK_TYPES = {
   wire:   { label: 'Wire',   color: '#F0F0F0', width: 1,   particles: 0, particleSpeed: 0,     particleWidth: 0, particleColor: '#ffffff' },
   stream: { label: 'Stream', color: '#00ffff', width: 1.5, particles: 3, particleSpeed: 0.004, particleWidth: 2, particleColor: '#00ffff' },
@@ -37,15 +40,21 @@ function App() {
   const [showDeleteNode, setShowDeleteNode] = useState(false);
   const [showAddLink, setShowAddLink] = useState(false);
   const [showFileOps, setShowFileOps] = useState(false);
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [timelineGranularity, setTimelineGranularity] = useState('month');
+  const [timelineYear, setTimelineYear] = useState(new Date().getFullYear());
+  const [timelineRange, setTimelineRange] = useState('full');
+  const [timelineSpacingY, setTimelineSpacingY] = useState(200);
 
   // Dynamic panel positioning logic
   const getPanelX = (panelId) => {
-    const panelOrder = ['file-ops', 'add-node', 'delete-node', 'add-link', 'node-editor', 'link-editor'];
+    const panelOrder = ['file-ops', 'add-node', 'delete-node', 'add-link', 'timeline', 'node-editor', 'link-editor'];
     const panelStates = {
       'file-ops': showFileOps,
       'add-node': showAddNode,
       'delete-node': showDeleteNode,
       'add-link': showAddLink,
+      'timeline': showTimeline,
       'node-editor': !!selectedNodeForEdit,
       'link-editor': !!selectedLinkForEdit && !selectedNodeForEdit
     };
@@ -113,8 +122,8 @@ function App() {
 
 
   const getCleanGraphData = useCallback(() => ({
-    nodes: graphData.nodes.map(({ id, color, textSize, group, x, y, z }) => ({
-      id, color, textSize, group, x, y, z,
+    nodes: graphData.nodes.map(({ id, color, textSize, group, x, y, z, nodeType }) => ({
+      id, color, textSize, group, x, y, z, nodeType,
     })),
     links: graphData.links.map(({ source, target, color, thickness, linkType }) => ({
       source: typeof source === 'object' ? source.id : source,
@@ -519,6 +528,49 @@ function App() {
       }
     }
   }, [consoleInput, cameraBookmarks, groupNames, appendConsoleLine]);
+
+  const generateTimeline = useCallback(() => {
+    const monthIndices = QUARTER_MONTHS[timelineRange] || QUARTER_MONTHS.full;
+    const newNodes = [];
+    const newLinks = [];
+    const existingIds = new Set(graphData.nodes.map(n => n.id));
+
+    if (timelineGranularity === 'month') {
+      const spacing = 160;
+      monthIndices.forEach((mIdx, i) => {
+        const id = `${MONTHS[mIdx]} ${timelineYear}`;
+        if (existingIds.has(id)) return;
+        const x = i * spacing;
+        newNodes.push({ id, color: '#FFD700', textSize: 10, group: 'timeline', nodeType: 'timeline', x, y: timelineSpacingY, z: 0, fx: x, fy: timelineSpacingY, fz: 0 });
+      });
+    } else {
+      // Week granularity — generate ~4 weeks per month in selected range
+      const spacing = 100;
+      let idx = 0;
+      monthIndices.forEach(mIdx => {
+        for (let w = 1; w <= 4; w++) {
+          const id = `${MONTHS[mIdx]} W${w} ${timelineYear}`;
+          if (existingIds.has(id)) return;
+          const x = idx * spacing;
+          newNodes.push({ id, color: '#FFD700', textSize: 8, group: 'timeline', nodeType: 'timeline', x, y: timelineSpacingY, z: 0, fx: x, fy: timelineSpacingY, fz: 0 });
+          idx++;
+        }
+      });
+    }
+
+    // Connect consecutive time nodes with Ghost links so the spine is visible
+    for (let i = 0; i < newNodes.length - 1; i++) {
+      newLinks.push({ source: newNodes[i].id, target: newNodes[i + 1].id, color: LINK_TYPES.ghost.color, thickness: LINK_TYPES.ghost.width, linkType: 'ghost' });
+    }
+
+    if (newNodes.length === 0) {
+      appendConsoleLine('All timeline nodes already exist — nothing added.');
+      return;
+    }
+
+    setGraphData(prev => ({ nodes: [...prev.nodes, ...newNodes], links: [...prev.links, ...newLinks] }));
+    appendConsoleLine(`Generated ${newNodes.length} ${timelineGranularity} nodes for ${timelineYear} (${timelineRange}).`);
+  }, [timelineGranularity, timelineYear, timelineRange, timelineSpacingY, graphData.nodes, appendConsoleLine]);
 
   const runConsoleCommand = async (rawCommand) => {
     const command = rawCommand.trim();
@@ -1489,8 +1541,18 @@ function App() {
         nodeAutoColorBy="group"
         nodeThreeObject={node => {
           const sprite = new SpriteText(node.id);
-          sprite.color = node.color || 'white';
-          sprite.textHeight = node.textSize || 6;
+          if (node.nodeType === 'timeline') {
+            sprite.color = '#000000';
+            sprite.backgroundColor = '#FFD700';
+            sprite.padding = 4;
+            sprite.borderRadius = 4;
+            sprite.borderWidth = 1;
+            sprite.borderColor = '#FFA500';
+            sprite.textHeight = node.textSize || 10;
+          } else {
+            sprite.color = node.color || 'white';
+            sprite.textHeight = node.textSize || 6;
+          }
           return sprite;
         }}
         linkWidth={link => {
@@ -1985,6 +2047,67 @@ function App() {
           </div>
         </FloatablePanel>
       )}
+
+      {/* Timeline Generator Panel */}
+      {showTimeline && (
+        <FloatablePanel
+          id="timeline-panel"
+          title="Timeline Generator"
+          defaultPosition={{ x: getPanelX('timeline'), y: 80 }}
+          defaultSize={{ width: 280, height: 'auto' }}
+          minWidth={250}
+          onClose={() => setShowTimeline(false)}
+        >
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label>Granularity</Label>
+              <Select value={timelineGranularity} onValueChange={setTimelineGranularity}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="month">Month</SelectItem>
+                  <SelectItem value="week">Week</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Year</Label>
+              <Input
+                type="number"
+                value={timelineYear}
+                onChange={e => setTimelineYear(parseInt(e.target.value) || new Date().getFullYear())}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Range</Label>
+              <Select value={timelineRange} onValueChange={setTimelineRange}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="full">Full Year</SelectItem>
+                  <SelectItem value="Q1">Q1 (Jan–Mar)</SelectItem>
+                  <SelectItem value="Q2">Q2 (Apr–Jun)</SelectItem>
+                  <SelectItem value="Q3">Q3 (Jul–Sep)</SelectItem>
+                  <SelectItem value="Q4">Q4 (Oct–Dec)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Y Position (height in scene)</Label>
+              <Input
+                type="number"
+                value={timelineSpacingY}
+                onChange={e => setTimelineSpacingY(parseInt(e.target.value) || 200)}
+              />
+            </div>
+            <Button onClick={generateTimeline} size="sm" className="w-full">
+              Generate Timeline
+            </Button>
+            <p className="text-xs opacity-60">
+              Gold nodes = time anchors. Click any time node → "Add Connected Node" to attach a task to it.
+            </p>
+          </div>
+        </FloatablePanel>
+      )}
+
       <div
         className={`absolute top-0 left-4 z-[70] w-[900px] max-w-[calc(100vw-2rem)] border border-zinc-500/80 bg-zinc-900/30 text-zinc-100 shadow-2xl backdrop-blur-sm transition-all duration-300 ${showConsole ? 'translate-y-4 opacity-100 pointer-events-auto' : '-translate-y-full opacity-0 pointer-events-none'}`}
       >
@@ -2029,6 +2152,7 @@ function App() {
         <Button className="text-base px-4 py-2 h-auto" variant={showAddNode ? "default" : "outline"} onClick={() => setShowAddNode(prev => !prev)}>+ Node</Button>
         <Button className="text-base px-4 py-2 h-auto" variant={showDeleteNode ? "default" : "outline"} onClick={() => setShowDeleteNode(prev => !prev)}>- Node</Button>
         <Button className="text-base px-4 py-2 h-auto" variant={showAddLink ? "default" : "outline"} onClick={() => setShowAddLink(prev => !prev)}>Link</Button>
+        <Button className="text-base px-4 py-2 h-auto" variant={showTimeline ? "default" : "outline"} onClick={() => setShowTimeline(prev => !prev)}>Timeline</Button>
         </div>
         {groupNames.length > 0 && (
           <div className="flex max-w-[95vw] flex-wrap items-center justify-center gap-2 rounded-2xl border border-zinc-600/70 bg-black/40 px-3 py-2 backdrop-blur-sm">
