@@ -112,6 +112,12 @@ function App() {
       ...node,
       color: node.color || '#1A75FF',
       textSize: node.textSize || 6,
+      // Re-pin timeline nodes and any node that had fx/fy/fz saved
+      ...(node.nodeType === 'timeline'
+        ? { fx: node.fx ?? node.x, fy: node.fy ?? node.y, fz: node.fz ?? node.z }
+        : node.fx !== undefined
+          ? { fx: node.fx, fy: node.fy, fz: node.fz }
+          : {}),
     })),
     links: (data.links || []).map(link => ({
       ...link,
@@ -124,8 +130,9 @@ function App() {
 
 
   const getCleanGraphData = useCallback(() => ({
-    nodes: graphData.nodes.map(({ id, color, textSize, group, x, y, z, nodeType, amount, date }) => ({
+    nodes: graphData.nodes.map(({ id, color, textSize, group, x, y, z, fx, fy, fz, nodeType, amount, date }) => ({
       id, color, textSize, group, x, y, z, nodeType, amount, date,
+      ...(fx !== undefined ? { fx, fy, fz } : {}),
     })),
     links: graphData.links.map(({ source, target, color, thickness, linkType }) => ({
       source: typeof source === 'object' ? source.id : source,
