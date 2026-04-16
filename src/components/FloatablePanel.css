@@ -1,41 +1,50 @@
-/* FloatablePanel Styles */
+/* FloatablePanel — Cyberpunk Theme */
 
 .floatable-panel {
-  overflow: visible !important;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  border-radius: 12px;
-  background: white;
-  border: 1px solid #e5e7eb;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  border-radius: 4px;
+  background: rgba(5, 5, 15, 0.92);
+  border: 1px solid #00ff41;
+  box-shadow:
+    0 0 8px #00ff4155,
+    0 0 24px #00ff4122,
+    inset 0 0 20px rgba(0, 255, 65, 0.03);
   transition: box-shadow 0.2s ease;
+  backdrop-filter: blur(8px);
 }
 
 .floatable-panel.dragging {
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 0 16px #00ff4188,
+    0 0 48px #00ff4144;
   cursor: grabbing;
 }
 
+.floatable-panel.resizing {
+  box-shadow:
+    0 0 16px #00ff4188,
+    0 0 48px #00ff4144;
+}
+
 .floatable-panel-container {
-  overflow: visible !important;
   display: flex;
   flex-direction: column;
   height: 100%;
   position: relative;
 }
 
-/* Header Styles */
+/* Header */
 .floatable-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
-  background: white;
-  color: black;
+  padding: 8px 12px;
+  background: rgba(0, 255, 65, 0.07);
+  border-bottom: 1px solid #00ff4155;
   cursor: grab;
   user-select: none;
-  border-bottom: 1px solid #f3f4f6;
   flex-shrink: 0;
 }
 
@@ -50,49 +59,102 @@
   flex: 1;
 }
 
+.floatable-panel-grip-icon {
+  color: #00ff4188;
+}
+
 .floatable-panel-title {
-  font-size: 1rem;
+  font-size: 0.78rem;
   font-weight: 700;
   margin: 0;
-  color: #111827;
+  color: #00ff41;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 8px #00ff41;
+  font-family: 'Courier New', monospace;
 }
 
 .floatable-panel-close-btn {
-  color: #6b7280;
-  background: #f3f4f6;
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  border: none;
+  color: #00ff41;
+  background: rgba(0, 255, 65, 0.1);
+  border: 1px solid #00ff4155;
+  border-radius: 3px;
+  padding: 3px 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.05em;
   cursor: pointer;
+  text-transform: uppercase;
+  transition: background 0.15s, box-shadow 0.15s;
 }
 
 .floatable-panel-close-btn:hover {
-  background: #e5e7eb;
-  color: #374151;
+  background: rgba(0, 255, 65, 0.2);
+  box-shadow: 0 0 8px #00ff4155;
+  color: #ffffff;
 }
 
-/* Content Styles */
+/* Content */
 .floatable-panel-content {
   flex: 1;
   overflow: visible;
   overflow-x: hidden;
   padding: 14px;
-  background: white;
+  background: transparent;
+  color: #c8ffd4;
+  font-family: 'Courier New', monospace;
 }
 
-/* Custom scrollbar */
+/* Override shadcn/radix label and input colors inside panels */
+.floatable-panel-content label,
+.floatable-panel-content [data-slot="label"] {
+  color: #00ff41 !important;
+  font-family: 'Courier New', monospace !important;
+  font-size: 0.72rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.floatable-panel-content input:not([type="color"]),
+.floatable-panel-content textarea {
+  background: rgba(0, 255, 65, 0.05) !important;
+  border-color: #00ff4155 !important;
+  color: #00ff41 !important;
+  font-family: 'Courier New', monospace !important;
+}
+
+.floatable-panel-content input:focus:not([type="color"]),
+.floatable-panel-content textarea:focus {
+  border-color: #00ff41 !important;
+  box-shadow: 0 0 8px #00ff4155 !important;
+  outline: none;
+}
+
+.floatable-panel-content button {
+  font-family: 'Courier New', monospace !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.floatable-panel-content [role="combobox"],
+.floatable-panel-content [data-radix-select-trigger] {
+  background: rgba(0, 255, 65, 0.05) !important;
+  border-color: #00ff4155 !important;
+  color: #00ff41 !important;
+  font-family: 'Courier New', monospace !important;
+}
+
+/* Scrollbar */
 .floatable-panel-content::-webkit-scrollbar {
   width: 4px;
 }
-
 .floatable-panel-content::-webkit-scrollbar-track {
   background: transparent;
 }
-
 .floatable-panel-content::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: #00ff4155;
   border-radius: 10px;
 }
 
@@ -104,16 +166,30 @@
   width: 16px;
   height: 16px;
   cursor: se-resize;
-  background: transparent;
+  background: linear-gradient(135deg, transparent 50%, #00ff4155 50%);
 }
 
-/* Force white background even in dark mode for this specific component */
-@media (prefers-color-scheme: dark) {
-  .floatable-panel, .floatable-panel-content, .floatable-panel-header {
-    background: white !important;
-    color: black !important;
-  }
-  .floatable-panel-title {
-    color: #111827 !important;
-  }
+/* Corner accent lines */
+.floatable-panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 16px; height: 16px;
+  border-top: 2px solid #00ff41;
+  border-left: 2px solid #00ff41;
+  border-radius: 4px 0 0 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.floatable-panel::after {
+  content: '';
+  position: absolute;
+  bottom: 0; right: 0;
+  width: 16px; height: 16px;
+  border-bottom: 2px solid #00ff41;
+  border-right: 2px solid #00ff41;
+  border-radius: 0 0 4px 0;
+  pointer-events: none;
+  z-index: 1;
 }

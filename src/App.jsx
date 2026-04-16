@@ -20,6 +20,7 @@ function App() {
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [newNodeId, setNewNodeId] = useState('');
   const [newNodeGroup, setNewNodeGroup] = useState('general');
+  const [connectedNodeId, setConnectedNodeId] = useState('');
   const [selectedNodes, setSelectedNodes] = useState([]);
   const [recordedOGPositions, setRecordedOGPositions] = useState({ nodes: [], links: [] });
   const [showControls, setShowControls] = useState(false);
@@ -1081,6 +1082,34 @@ function App() {
     }, 100); // Small delay to ensure node is rendered
   };
 
+  const addConnectedNode = useCallback(() => {
+    const newId = connectedNodeId.trim();
+    if (!newId) { appendConsoleLine('Enter a name for the new node.'); return; }
+    if (!selectedNodeForEdit) { appendConsoleLine('No node selected.'); return; }
+    if (graphData.nodes.find(n => n.id === newId)) { appendConsoleLine(`Node "${newId}" already exists.`); return; }
+
+    const parent = graphData.nodes.find(n => n.id === selectedNodeForEdit.id);
+    const offset = 40;
+    const angle = Math.random() * Math.PI * 2;
+    const elevation = (Math.random() - 0.5) * Math.PI * 0.5;
+    const pos = {
+      x: (parent?.x || 0) + Math.cos(angle) * Math.cos(elevation) * offset,
+      y: (parent?.y || 0) + Math.sin(elevation) * offset,
+      z: (parent?.z || 0) + Math.sin(angle) * Math.cos(elevation) * offset,
+    };
+
+    const newNode = { id: newId, color: '#1A75FF', textSize: 6, group: selectedNodeForEdit.group, ...pos, fx: pos.x, fy: pos.y, fz: pos.z };
+    const newLink = { source: selectedNodeForEdit.id, target: newId, color: '#F0F0F0', thickness: 1 };
+
+    setGraphData(prev => ({
+      nodes: [...prev.nodes, newNode],
+      links: [...prev.links, newLink],
+    }));
+
+    appendConsoleLine(`Created node "${newId}" linked to "${selectedNodeForEdit.id}".`);
+    setConnectedNodeId('');
+  }, [connectedNodeId, selectedNodeForEdit, graphData.nodes, appendConsoleLine]);
+
   const deleteNode = (nodeId) => {
     if (!nodeId) {
       appendConsoleLine('Please select a node to delete');
@@ -1842,6 +1871,18 @@ function App() {
                 }}
                 min={1} max={20} step={1} className="w-full"
               />
+            </div>
+            <div className="border-t border-[#00ff4133] pt-3 space-y-2">
+              <Label>Add Connected Node</Label>
+              <Input
+                placeholder="New node name..."
+                value={connectedNodeId}
+                onChange={(e) => setConnectedNodeId(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') addConnectedNode(); }}
+              />
+              <Button onClick={addConnectedNode} size="sm" className="w-full" disabled={!connectedNodeId.trim()}>
+                + Create &amp; Link
+              </Button>
             </div>
           </div>
         </FloatablePanel>
