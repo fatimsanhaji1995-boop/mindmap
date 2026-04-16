@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator.jsx';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx';
 import { Slider } from '@/components/ui/slider.jsx';
 import FloatablePanel from '@/components/FloatablePanel.jsx';
+import CyberpunkDashboard from '@/components/CyberpunkDashboard.jsx';
 import RegistrationForm from '@/components/RegistrationForm.jsx';
 import { getDescendants, filterGraphByCollapsedNodes, toggleNodeCollapse, isNodeCollapsed } from '@/lib/collapseUtils';
 import './App.css';
@@ -41,6 +42,7 @@ function App() {
   const [showAddLink, setShowAddLink] = useState(false);
   const [showFileOps, setShowFileOps] = useState(false);
   const [showTimeline, setShowTimeline] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
   const [timelineGranularity, setTimelineGranularity] = useState('month');
   const [timelineYear, setTimelineYear] = useState(new Date().getFullYear());
   const [timelineRange, setTimelineRange] = useState('full');
@@ -122,8 +124,8 @@ function App() {
 
 
   const getCleanGraphData = useCallback(() => ({
-    nodes: graphData.nodes.map(({ id, color, textSize, group, x, y, z, nodeType }) => ({
-      id, color, textSize, group, x, y, z, nodeType,
+    nodes: graphData.nodes.map(({ id, color, textSize, group, x, y, z, nodeType, amount, date }) => ({
+      id, color, textSize, group, x, y, z, nodeType, amount, date,
     })),
     links: graphData.links.map(({ source, target, color, thickness, linkType }) => ({
       source: typeof source === 'object' ? source.id : source,
@@ -1952,6 +1954,30 @@ function App() {
               />
             </div>
             <div className="border-t border-[#00ff4133] pt-3 space-y-2">
+              <Label>Amount / Cost ($)</Label>
+              <Input
+                type="number"
+                min="0"
+                placeholder="0.00"
+                value={selectedNodeForEdit.amount || ''}
+                onChange={(e) => {
+                  const val = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                  setGraphData(prev => ({ ...prev, nodes: prev.nodes.map(n => n.id === selectedNodeForEdit.id ? { ...n, amount: val } : n) }));
+                  setSelectedNodeForEdit(prev => ({ ...prev, amount: val }));
+                }}
+              />
+              <Label>Date</Label>
+              <Input
+                type="date"
+                value={selectedNodeForEdit.date || ''}
+                onChange={(e) => {
+                  const val = e.target.value || undefined;
+                  setGraphData(prev => ({ ...prev, nodes: prev.nodes.map(n => n.id === selectedNodeForEdit.id ? { ...n, date: val } : n) }));
+                  setSelectedNodeForEdit(prev => ({ ...prev, date: val }));
+                }}
+              />
+            </div>
+            <div className="border-t border-[#00ff4133] pt-3 space-y-2">
               <Label>Add Connected Node</Label>
               <Input
                 placeholder="New node name..."
@@ -2046,6 +2072,15 @@ function App() {
             </div>
           </div>
         </FloatablePanel>
+      )}
+
+      {/* Cyberpunk Dashboard */}
+      {showDashboard && (
+        <CyberpunkDashboard
+          graphData={graphData}
+          defaultPosition={{ x: Math.max(20, window.innerWidth / 2 - 360), y: 80 }}
+          onClose={() => setShowDashboard(false)}
+        />
       )}
 
       {/* Timeline Generator Panel */}
@@ -2153,6 +2188,7 @@ function App() {
         <Button className="text-base px-4 py-2 h-auto" variant={showDeleteNode ? "default" : "outline"} onClick={() => setShowDeleteNode(prev => !prev)}>- Node</Button>
         <Button className="text-base px-4 py-2 h-auto" variant={showAddLink ? "default" : "outline"} onClick={() => setShowAddLink(prev => !prev)}>Link</Button>
         <Button className="text-base px-4 py-2 h-auto" variant={showTimeline ? "default" : "outline"} onClick={() => setShowTimeline(prev => !prev)}>Timeline</Button>
+        <Button className="text-base px-4 py-2 h-auto" variant={showDashboard ? "default" : "outline"} onClick={() => setShowDashboard(prev => !prev)}>Dashboard</Button>
         </div>
         {groupNames.length > 0 && (
           <div className="flex max-w-[95vw] flex-wrap items-center justify-center gap-2 rounded-2xl border border-zinc-600/70 bg-black/40 px-3 py-2 backdrop-blur-sm">
