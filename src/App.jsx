@@ -428,8 +428,43 @@ function App() {
     const action = rawAction.toLowerCase();
 
     if (action === 'help') {
-      appendConsoleLine('Commands: help, clear, new, set <graphId>, save, load, list, groups list|hide|show|toggle|showall, og record|save|load, camera capture|list|load|delete|save|sync, focus, collapse, zoomout, toggle <panel>.');
-      appendConsoleLine('Panels: add-node, delete-node, add-link, controls.');
+      appendConsoleLine('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      appendConsoleLine(' AVAILABLE COMMANDS');
+      appendConsoleLine('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      appendConsoleLine('help                        → show this command list');
+      appendConsoleLine('clear                       → clear the console');
+      appendConsoleLine('new                         → create a new empty graph');
+      appendConsoleLine('set <graphId>               → set the active graph ID');
+      appendConsoleLine('save                        → save current graph to cloud');
+      appendConsoleLine('load                        → load current graph from cloud');
+      appendConsoleLine('list                        → list all graphs in database');
+      appendConsoleLine('── GROUPS ───────────────────────────');
+      appendConsoleLine('groups list                 → list all groups + visibility');
+      appendConsoleLine('groups hide <name>          → hide a group');
+      appendConsoleLine('groups show <name>          → show a group');
+      appendConsoleLine('groups toggle <name>        → toggle group visibility');
+      appendConsoleLine('groups showall              → make all groups visible');
+      appendConsoleLine('── OG SNAPSHOT ──────────────────────');
+      appendConsoleLine('og record                   → record snapshot from current positions');
+      appendConsoleLine('og save                     → save OG snapshot to database');
+      appendConsoleLine('og load                     → load OG snapshot from database');
+      appendConsoleLine('── CAMERA ───────────────────────────');
+      appendConsoleLine('camera capture [name]       → capture a camera bookmark');
+      appendConsoleLine('camera list                 → list all camera bookmarks');
+      appendConsoleLine('camera load <name>          → restore a camera bookmark');
+      appendConsoleLine('camera delete <name>        → delete a camera bookmark');
+      appendConsoleLine('camera save                 → save bookmarks to database');
+      appendConsoleLine('camera sync                 → sync bookmarks from database');
+      appendConsoleLine('── VIEW ─────────────────────────────');
+      appendConsoleLine('zoomout                     → reset camera to default view');
+      appendConsoleLine('focus                       → toggle focus mode on/off');
+      appendConsoleLine('collapse                    → toggle collapse mode on/off');
+      appendConsoleLine('── PANELS ───────────────────────────');
+      appendConsoleLine('toggle add-node             → toggle Add Node panel');
+      appendConsoleLine('toggle delete-node          → toggle Delete Node panel');
+      appendConsoleLine('toggle add-link             → toggle Add Link panel');
+      appendConsoleLine('toggle controls             → toggle Controls panel');
+      appendConsoleLine('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       return;
     }
 
