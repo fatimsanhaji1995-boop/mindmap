@@ -1360,6 +1360,7 @@ function App() {
           return sprite;
         }}
         linkWidth={link => link.thickness || 1}
+        linkOpacity={1}
         linkColor={link => {
           const color = link.color || '#F0F0F0';
           // Force full opacity for all links
