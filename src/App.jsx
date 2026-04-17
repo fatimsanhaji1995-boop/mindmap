@@ -1658,41 +1658,35 @@ function App() {
   return (
     <div className="relative h-screen w-screen bg-black text-white">
 
-      {/* Inline node creation overlay */}
+      {/* Inline node creation — minimal bottom bar, graph stays fully interactive */}
       {inlineNodeMode && (
-        <div className="absolute inset-0 z-[200] flex items-center justify-center pointer-events-none">
-          <div className="pointer-events-auto flex flex-col items-center gap-3" style={{ fontFamily: 'Courier New, monospace' }}>
-            <div style={{ fontSize: 11, color: '#00ff4177', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-              New Node — Enter to create — Esc to cancel
-            </div>
-            <input
-              autoFocus
-              value={inlineNodeText}
-              onChange={e => setInlineNodeText(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') commitInlineNode();
-                if (e.key === 'Escape') { setInlineNodeMode(false); setInlineNodeText(''); }
-              }}
-              placeholder="node name…"
-              style={{
-                background: 'rgba(0,4,2,0.92)',
-                border: '1px solid #00ff41',
-                boxShadow: '0 0 20px #00ff4166, inset 0 0 10px rgba(0,255,65,0.05)',
-                color: '#00ff41',
-                fontFamily: 'Courier New, monospace',
-                fontSize: 28,
-                padding: '10px 24px',
-                outline: 'none',
-                textAlign: 'center',
-                width: 420,
-                textShadow: '0 0 10px #00ff41',
-                letterSpacing: '0.05em',
-              }}
-            />
-            {inlineNodeText && graphData.nodes.find(n => n.id === inlineNodeText.trim()) && (
-              <div style={{ color: '#ff00cc', fontSize: 11, textShadow: '0 0 8px #ff00cc' }}>⚠ node already exists</div>
-            )}
-          </div>
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-3 pointer-events-none">
+          <span style={{ color: '#00ff4155', fontFamily: 'Courier New, monospace', fontSize: 13, letterSpacing: '0.12em' }}>N›</span>
+          <input
+            autoFocus
+            value={inlineNodeText}
+            onChange={e => setInlineNodeText(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') commitInlineNode();
+              if (e.key === 'Escape') { setInlineNodeMode(false); setInlineNodeText(''); }
+            }}
+            placeholder="type node name…"
+            className="pointer-events-auto"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              borderBottom: `1px solid ${inlineNodeText && graphData.nodes.find(n => n.id === inlineNodeText.trim()) ? '#ff00cc' : '#00ff41'}`,
+              color: '#00ff41',
+              fontFamily: 'Courier New, monospace',
+              fontSize: 18,
+              padding: '2px 0',
+              outline: 'none',
+              width: 280,
+              textShadow: '0 0 8px #00ff41',
+              caretColor: '#00ff41',
+            }}
+          />
+          <span style={{ color: '#00ff4133', fontFamily: 'Courier New, monospace', fontSize: 10, letterSpacing: '0.1em' }}>ESC cancel</span>
         </div>
       )}
 
