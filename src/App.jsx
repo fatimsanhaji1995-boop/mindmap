@@ -37,19 +37,19 @@ function makeCyberpunkSprite(text, color = '#00ff41', textHeight = 6) {
   const ty = fontSize + pad * 0.55;
 
   // Outer glow pass
-  ctx.shadowBlur  = 24;
+  ctx.shadowBlur  = 8;
   ctx.shadowColor = color;
   ctx.fillStyle   = color;
-  ctx.globalAlpha = 0.45;
+  ctx.globalAlpha = 0.2;
   ctx.fillText(text, tx, ty);
 
   // Mid glow pass
-  ctx.shadowBlur  = 12;
-  ctx.globalAlpha = 0.65;
+  ctx.shadowBlur  = 4;
+  ctx.globalAlpha = 0.5;
   ctx.fillText(text, tx, ty);
 
   // Sharp crisp text on top
-  ctx.shadowBlur  = 5;
+  ctx.shadowBlur  = 2;
   ctx.globalAlpha = 1;
   ctx.fillText(text, tx, ty);
 
@@ -1582,9 +1582,9 @@ function App() {
           import('three/examples/jsm/postprocessing/OutputPass.js').then(({ OutputPass }) => {
             const bloom = new UnrealBloomPass(
               new THREE.Vector2(window.innerWidth, window.innerHeight),
-              0.28,  // strength (reduced 80%)
-              0.15,  // radius (reduced 80%)
-              0.4    // threshold — higher = fewer things bloom
+              0.18,  // strength
+              0.1,   // radius
+              0.6    // threshold — high = only very bright things bloom
             );
             composer.addPass(bloom);
             composer.addPass(new OutputPass());
@@ -1611,7 +1611,6 @@ function App() {
 
       if ((event.key === 'n' || event.key === 'N') && !isTypingField) {
         event.preventDefault();
-        // Compute spawn position from camera
         const graph = graphRef.current;
         if (graph) {
           const cam = graph.camera();
@@ -1623,9 +1622,26 @@ function App() {
         return;
       }
 
+      if ((event.key === 'l' || event.key === 'L') && !isTypingField) {
+        event.preventDefault();
+        setIsLinkSelectionMode(true);
+        setSelectedNodes([]);
+        setSelectedNodeForEdit(null);
+        return;
+      }
+
+      if (event.key === 'Enter' && isLinkSelectionMode && !isTypingField) {
+        event.preventDefault();
+        addLink();
+        setIsLinkSelectionMode(false);
+        return;
+      }
+
       if (event.key === 'Escape') {
         setInlineNodeMode(false);
         setInlineNodeText('');
+        setIsLinkSelectionMode(false);
+        setSelectedNodes([]);
       }
     };
 
@@ -1657,6 +1673,26 @@ function App() {
 
   return (
     <div className="relative h-screen w-screen bg-black text-white">
+
+      {/* Inline link mode — minimal bottom bar */}
+      {isLinkSelectionMode && !inlineNodeMode && (
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-4 pointer-events-none">
+          <span style={{ color: '#00ff4155', fontFamily: 'Courier New, monospace', fontSize: 13, letterSpacing: '0.12em' }}>L›</span>
+          <span style={{ fontFamily: 'Courier New, monospace', fontSize: 15, color: '#00ffff', textShadow: '0 0 6px #00ffff' }}>
+            {selectedNodes[0]
+              ? <><span style={{ color: '#FFD700' }}>{selectedNodes[0]}</span><span style={{ color: '#00ff4155' }}> → </span>{selectedNodes[1] ? <span style={{ color: '#FFD700' }}>{selectedNodes[1]}</span> : <span style={{ opacity: 0.4 }}>click 2nd node…</span>}</>
+              : <span style={{ opacity: 0.4 }}>click a node…</span>}
+          </span>
+          {selectedNodes[0] && selectedNodes[1] && (
+            <span
+              className="pointer-events-auto"
+              onClick={() => { addLink(); setIsLinkSelectionMode(false); }}
+              style={{ color: '#00ff41', fontFamily: 'Courier New, monospace', fontSize: 12, cursor: 'pointer', borderBottom: '1px solid #00ff4155', textShadow: '0 0 6px #00ff41' }}
+            >ENTER to link</span>
+          )}
+          <span style={{ color: '#00ff4133', fontFamily: 'Courier New, monospace', fontSize: 10, letterSpacing: '0.1em' }}>ESC cancel</span>
+        </div>
+      )}
 
       {/* Inline node creation — minimal bottom bar, graph stays fully interactive */}
       {inlineNodeMode && (
