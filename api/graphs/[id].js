@@ -12,11 +12,12 @@ function normalizeOgSnapshot(snapshot) {
   const links = Array.isArray(snapshot.links) ? snapshot.links : [];
   return {
     nodes: nodes.map(({ id, x, y, z }) => ({ id, x, y, z })),
-    links: links.map(({ source, target, color, thickness }) => ({
+    links: links.map(({ source, target, color, thickness, linkType }) => ({
       source: typeof source === 'object' ? source.id : source,
       target: typeof target === 'object' ? target.id : target,
       color,
       thickness,
+      ...(linkType !== undefined ? { linkType } : {}),
     })),
   };
 }
@@ -42,12 +43,19 @@ function normalizeGraph(payload) {
   const cameraBookmarks = normalizeCameraBookmarks(payload?.cameraBookmarks);
 
   return {
-    nodes: nodes.map(({ id, color, textSize, group, x, y, z }) => ({ id, color, textSize, group, x, y, z })),
-    links: links.map(({ source, target, color, thickness }) => ({
+    nodes: nodes.map(({ id, color, textSize, group, x, y, z, fx, fy, fz, nodeType, amount, date }) => ({
+      id, color, textSize, group, x, y, z,
+      ...(fx !== undefined ? { fx, fy, fz } : {}),
+      ...(nodeType !== undefined ? { nodeType } : {}),
+      ...(amount !== undefined ? { amount } : {}),
+      ...(date !== undefined ? { date } : {}),
+    })),
+    links: links.map(({ source, target, color, thickness, linkType }) => ({
       source: typeof source === 'object' ? source.id : source,
       target: typeof target === 'object' ? target.id : target,
       color,
       thickness,
+      ...(linkType !== undefined ? { linkType } : {}),
     })),
     ...(ogSnapshot ? { ogSnapshot } : {}),
     ...(cameraBookmarks.length ? { cameraBookmarks } : {}),
