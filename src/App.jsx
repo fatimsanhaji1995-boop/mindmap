@@ -1593,9 +1593,9 @@ function App() {
           import('three/examples/jsm/postprocessing/OutputPass.js').then(({ OutputPass }) => {
             const bloom = new UnrealBloomPass(
               new THREE.Vector2(window.innerWidth, window.innerHeight),
-              1.4,   // strength
-              0.6,   // radius
-              0.05   // threshold — low so neon colors bloom
+              0.28,  // strength (reduced 80%)
+              0.15,  // radius (reduced 80%)
+              0.4    // threshold — higher = fewer things bloom
             );
             composer.addPass(bloom);
             composer.addPass(new OutputPass());
