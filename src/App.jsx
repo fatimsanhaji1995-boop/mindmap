@@ -33,17 +33,6 @@ function makeCyberpunkSprite(text, color = '#00ff41', textHeight = 6) {
   canvas.height = fontSize + pad * 2;
   ctx.font = font;
 
-  // Dark background
-  ctx.fillStyle = 'rgba(0, 3, 1, 0.88)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Border with glow
-  ctx.shadowColor = color;
-  ctx.shadowBlur  = 10;
-  ctx.strokeStyle = color;
-  ctx.lineWidth   = 1.8;
-  ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
-
   const tx = pad;
   const ty = fontSize + pad * 0.55;
 
