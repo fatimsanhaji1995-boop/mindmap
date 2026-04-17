@@ -165,6 +165,10 @@ function App() {
   const [hiddenGroups, setHiddenGroups] = useState(new Set());
   const autoRotateRef = useRef(null);
   const consoleOutputRef = useRef(null);
+  const bloomRef = useRef(null);
+  const [inlineNodeMode, setInlineNodeMode] = useState(false);
+  const [inlineNodeText, setInlineNodeText] = useState('');
+  const [inlineNodePos, setInlineNodePos] = useState({ x: 0, y: 0, z: 0 });
 
   const normalizeGraphData = useCallback((data) => ({
     nodes: (data.nodes || []).map(node => ({
@@ -1577,31 +1581,132 @@ function App() {
   }, [autoRotate, rotationSpeed]);
 
 
+  // Bloom post-processing
+  useEffect(() => {
+    const graph = graphRef.current;
+    if (!graph) return;
+    const init = () => {
+      try {
+        const composer = graph.postProcessingComposer();
+        if (!composer || bloomRef.current) return;
+        import('three/examples/jsm/postprocessing/UnrealBloomPass.js').then(({ UnrealBloomPass }) => {
+          import('three/examples/jsm/postprocessing/OutputPass.js').then(({ OutputPass }) => {
+            const bloom = new UnrealBloomPass(
+              new THREE.Vector2(window.innerWidth, window.innerHeight),
+              1.4,   // strength
+              0.6,   // radius
+              0.05   // threshold — low so neon colors bloom
+            );
+            composer.addPass(bloom);
+            composer.addPass(new OutputPass());
+            bloomRef.current = bloom;
+          });
+        });
+      } catch (e) { /* graph not ready yet */ }
+    };
+    const t = setTimeout(init, 800);
+    return () => clearTimeout(t);
+  }, []);
+
   useEffect(() => {
     const handleGlobalKeydown = (event) => {
-      if (event.key !== 'Tab') {
-        return;
-      }
-
       const activeTag = document.activeElement?.tagName;
       const isTypingField = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || document.activeElement?.isContentEditable;
-      if (isTypingField) {
+
+      if (event.key === 'Tab') {
+        if (isTypingField) return;
+        event.preventDefault();
+        setShowConsole((prev) => !prev);
         return;
       }
 
-      event.preventDefault();
-      setShowConsole((prev) => !prev);
+      if ((event.key === 'n' || event.key === 'N') && !isTypingField) {
+        event.preventDefault();
+        // Compute spawn position from camera
+        const graph = graphRef.current;
+        if (graph) {
+          const cam = graph.camera();
+          const dir = cam.getWorldDirection(new THREE.Vector3());
+          setInlineNodePos({ x: cam.position.x + dir.x * 80, y: cam.position.y + dir.y * 80, z: cam.position.z + dir.z * 80 });
+        }
+        setInlineNodeText('');
+        setInlineNodeMode(true);
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        setInlineNodeMode(false);
+        setInlineNodeText('');
+      }
     };
 
     window.addEventListener('keydown', handleGlobalKeydown);
     return () => window.removeEventListener('keydown', handleGlobalKeydown);
   }, []);
 
+  const commitInlineNode = useCallback(() => {
+    const id = inlineNodeText.trim();
+    if (!id) { setInlineNodeMode(false); return; }
+    if (graphData.nodes.find(n => n.id === id)) {
+      appendConsoleLine(`Node "${id}" already exists.`);
+      return;
+    }
+    setGraphData(prev => ({
+      ...prev,
+      nodes: [...prev.nodes, { id, color: '#00ff41', textSize: 6, group: 'general', ...inlineNodePos, fx: inlineNodePos.x, fy: inlineNodePos.y, fz: inlineNodePos.z }],
+    }));
+    appendConsoleLine(`Created node "${id}".`);
+    setInlineNodeMode(false);
+    setInlineNodeText('');
+  }, [inlineNodeText, inlineNodePos, graphData.nodes, appendConsoleLine]);
+
   // Filter graph data based on collapsed nodes
-  const displayGraphData = filterGraphByCollapsedNodes(visibleGraphData, collapsedNodes);
+  const baseDisplayData = filterGraphByCollapsedNodes(visibleGraphData, collapsedNodes);
+  const displayGraphData = inlineNodeMode && inlineNodeText.trim()
+    ? { ...baseDisplayData, nodes: [...baseDisplayData.nodes, { id: inlineNodeText || '…', color: '#00ff41', textSize: 6, isPreview: true, ...inlineNodePos }] }
+    : baseDisplayData;
 
   return (
     <div className="relative h-screen w-screen bg-black text-white">
+
+      {/* Inline node creation overlay */}
+      {inlineNodeMode && (
+        <div className="absolute inset-0 z-[200] flex items-center justify-center pointer-events-none">
+          <div className="pointer-events-auto flex flex-col items-center gap-3" style={{ fontFamily: 'Courier New, monospace' }}>
+            <div style={{ fontSize: 11, color: '#00ff4177', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+              New Node — Enter to create — Esc to cancel
+            </div>
+            <input
+              autoFocus
+              value={inlineNodeText}
+              onChange={e => setInlineNodeText(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') commitInlineNode();
+                if (e.key === 'Escape') { setInlineNodeMode(false); setInlineNodeText(''); }
+              }}
+              placeholder="node name…"
+              style={{
+                background: 'rgba(0,4,2,0.92)',
+                border: '1px solid #00ff41',
+                boxShadow: '0 0 20px #00ff4166, inset 0 0 10px rgba(0,255,65,0.05)',
+                color: '#00ff41',
+                fontFamily: 'Courier New, monospace',
+                fontSize: 28,
+                padding: '10px 24px',
+                outline: 'none',
+                textAlign: 'center',
+                width: 420,
+                textShadow: '0 0 10px #00ff41',
+                letterSpacing: '0.05em',
+              }}
+            />
+            {inlineNodeText && graphData.nodes.find(n => n.id === inlineNodeText.trim()) && (
+              <div style={{ color: '#ff00cc', fontSize: 11, textShadow: '0 0 8px #ff00cc' }}>⚠ node already exists</div>
+            )}
+          </div>
+        </div>
+      )}
+
       <ForceGraph3D
         ref={graphRef}
         graphData={displayGraphData}

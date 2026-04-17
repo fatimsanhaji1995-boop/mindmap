@@ -95,6 +95,21 @@ function GlowBarChart({ data, xKey, yKey, labelKey, onBarClick, selectedBar, col
 export default function CyberpunkDashboard({ graphData, defaultPosition, onClose }) {
   const [selectedMonth, setSelectedMonth] = useState(null);
 
+  const nodeStats = useMemo(() => {
+    const byCat = {};
+    let timelineCount = 0;
+    let total = 0;
+    graphData.nodes.forEach(n => {
+      if (n.isPreview) return;
+      if (n.nodeType === 'timeline') { timelineCount++; return; }
+      total++;
+      const cat = n.group || 'ungrouped';
+      byCat[cat] = (byCat[cat] || 0) + 1;
+    });
+    const categories = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
+    return { total, timelineCount, categories };
+  }, [graphData.nodes]);
+
   const { monthlyData, allMonths, grandTotal, unbudgetedCount } = useMemo(() => {
     const totals = {};
     const links = graphData.links.map(l => ({
@@ -283,6 +298,47 @@ export default function CyberpunkDashboard({ graphData, defaultPosition, onClose
             </div>
           </>
         )}
+
+        {/* ── Node Stats by Category ── */}
+        <div style={{ marginTop: 20, borderTop: '1px solid #00ff4133', paddingTop: 14 }}>
+          <div style={{ ...dimLabel, marginBottom: 10 }}>Nodes by Category</div>
+          <div style={{ display: 'flex', gap: 20, marginBottom: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={dimLabel}>Total Nodes</div>
+              <div style={{ fontSize: 22, fontWeight: 700, textShadow: '0 0 10px #00ff41' }}>{nodeStats.total}</div>
+            </div>
+            <div>
+              <div style={dimLabel}>Timeline Anchors</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#FFD700', textShadow: '0 0 10px #FFD700' }}>{nodeStats.timelineCount}</div>
+            </div>
+          </div>
+          {nodeStats.categories.length === 0 ? (
+            <div style={{ opacity: 0.3, fontSize: 12 }}>No categories yet.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {nodeStats.categories.map(([cat, count]) => {
+                const pct = Math.round((count / nodeStats.total) * 100);
+                return (
+                  <div key={cat}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
+                      <span style={{ color: '#00ffff', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{cat}</span>
+                      <span style={{ color: '#00ff41' }}>{count} <span style={{ opacity: 0.5 }}>({pct}%)</span></span>
+                    </div>
+                    <div style={{ height: 4, background: '#00ff4118', position: 'relative' }}>
+                      <div style={{
+                        height: '100%', width: `${pct}%`,
+                        background: '#00ffff',
+                        boxShadow: '0 0 6px #00ffff',
+                        transition: 'width 0.4s ease',
+                      }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
       </div>
     </FloatablePanel>
   );
