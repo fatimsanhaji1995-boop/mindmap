@@ -14,6 +14,7 @@ import FloatablePanel from '@/components/FloatablePanel.jsx';
 import CyberpunkDashboard from '@/components/CyberpunkDashboard.jsx';
 import RegistrationForm from '@/components/RegistrationForm.jsx';
 import { getDescendants, filterGraphByCollapsedNodes, toggleNodeCollapse, isNodeCollapsed } from '@/lib/collapseUtils';
+import { parseClipboardData, createNodesFromPaste } from '@/lib/clipboardUtils';
 import './App.css';
 
 // Creates a THREE.Sprite with neon glow — same visual as the console text-shadow
@@ -1646,8 +1647,66 @@ function App() {
     };
 
     window.addEventListener('keydown', handleGlobalKeydown);
-    return () => window.removeEventListener('keydown', handleGlobalKeydown);
-  }, []);
+    window.addEventListener('paste', handlePaste);
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeydown);
+      window.removeEventListener('paste', handlePaste);
+    };
+  }, [handlePaste]);
+
+  const handlePaste = useCallback(async (event) => {
+    const activeTag = document.activeElement?.tagName;
+    const isTypingField = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || document.activeElement?.isContentEditable;
+    
+    // Only handle paste if not in a text input field
+    if (isTypingField) return;
+    
+    event.preventDefault();
+    
+    try {
+      const pastedData = await parseClipboardData(event);
+      
+      // If nothing was pasted, return
+      if (!pastedData.images.length && !pastedData.text && !pastedData.urls.length) {
+        return;
+      }
+      
+      // Get camera position to place nodes in front of camera
+      const graph = graphRef.current;
+      if (!graph) return;
+      
+      const cam = graph.camera();
+      const dir = cam.getWorldDirection(new THREE.Vector3());
+      const pastePosition = {
+        x: cam.position.x + dir.x * 80,
+        y: cam.position.y + dir.y * 80,
+        z: cam.position.z + dir.z * 80,
+      };
+      
+      // Create nodes from pasted content
+      const existingNodeIds = graphData.nodes.map(n => n.id);
+      const newNodes = createNodesFromPaste(pastedData, pastePosition, existingNodeIds);
+      
+      if (newNodes.length === 0) return;
+      
+      // Add nodes to graph
+      setGraphData(prev => ({
+        ...prev,
+        nodes: [...prev.nodes, ...newNodes],
+      }));
+      
+      // Provide feedback
+      const summary = [];
+      if (pastedData.images.length) summary.push(`${pastedData.images.length} image(s)`);
+      if (pastedData.text) summary.push('text');
+      if (pastedData.urls.length) summary.push(`${pastedData.urls.length} link(s)`);
+      
+      appendConsoleLine(`✓ Pasted: ${summary.join(', ')} (${newNodes.length} node(s) created)`);
+    } catch (error) {
+      console.error('Error handling paste:', error);
+      appendConsoleLine('Error pasting content');
+    }
+  }, [graphData.nodes, appendConsoleLine]);
 
   const commitInlineNode = useCallback(() => {
     const id = inlineNodeText.trim();
@@ -1670,6 +1729,29 @@ function App() {
   const displayGraphData = inlineNodeMode && inlineNodeText.trim()
     ? { ...baseDisplayData, nodes: [...baseDisplayData.nodes, { id: inlineNodeText || '…', color: '#00ff41', textSize: 6, isPreview: true, ...inlineNodePos }] }
     : baseDisplayData;
+
+  // Create image sprites for image nodes
+  const makeImageSprite = (imageUrl) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    
+    // Create a placeholder for images (will be replaced with actual image rendering)
+    ctx.fillStyle = '#FF6B9D';
+    ctx.fillRect(0, 0, 128, 128);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('IMG', 64, 64);
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false });
+    const sprite = new THREE.Sprite(material);
+    sprite.scale.set(8, 8, 1);
+    return sprite;
+  };
 
   return (
     <div className="relative h-screen w-screen bg-black text-white">
@@ -1742,6 +1824,22 @@ function App() {
             sprite.borderColor     = '#FFA500';
             sprite.textHeight      = node.textSize || 10;
             return sprite;
+          }
+          if (node.nodeType === 'image' && node.imageUrl) {
+            return makeImageSprite(node.imageUrl);
+          }
+          if (node.nodeType === 'link' && node.url) {
+            const urlPreview = node.url.substring(0, 20) + (node.url.length > 20 ? '...' : '');
+            const sprite = new SpriteText(urlPreview);
+            sprite.color = '#000000';
+            sprite.backgroundColor = '#FFD700';
+            sprite.padding = 3;
+            sprite.textHeight = 5;
+            return sprite;
+          }
+          if (node.nodeType === 'text' && node.textContent) {
+            const preview = node.textContent.substring(0, 25) + (node.textContent.length > 25 ? '...' : '');
+            return makeCyberpunkSprite(preview, node.color || '#00ffff', node.textSize || 6);
           }
           return makeCyberpunkSprite(node.id, node.color || '#00ff41', node.textSize || 6);
         }}
