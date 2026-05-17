@@ -33,7 +33,6 @@ export default function RegistrationForm({ onRegistered }) {
       if (response.status === 201) {
         const payload = await response.json();
         onRegistered?.(payload.user);
-        window.location.assign('/');
         return;
       }
 

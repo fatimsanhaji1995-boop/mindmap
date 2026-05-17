@@ -369,7 +369,7 @@ function App() {
       appendConsoleLine(`${mode === 'login' ? 'Logged in' : 'Registered'} as ${payload.user.email}`);
       
       if (mode === 'register') {
-        window.location.assign('/dashboard');
+        setShowDashboard(true);
       }
     } catch (error) {
       appendConsoleLine(`Network error during ${mode}.`);
