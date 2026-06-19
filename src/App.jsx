@@ -2227,15 +2227,15 @@ function App() {
           // 2. Generate and attach the elegant floating UI label tag
           let tag;
           if (node.nodeType === 'timeline') {
-            tag = makeCyberpunkSprite(node.id, '#FFD700', 8, true);
+            tag = makeCyberpunkSprite(node.id, '#FFD700', node.textSize || 8, true);
           } else if (node.nodeType === 'link' && node.url) {
             const urlPreview = node.url.replace(/https?:\/\/(www\.)?/, '').substring(0, 18) + (node.url.length > 18 ? '…' : '');
-            tag = makeCyberpunkSprite(urlPreview, '#0088ff', 5);
+            tag = makeCyberpunkSprite(urlPreview, '#0088ff', node.textSize || 5);
           } else if (node.nodeType === 'text' && node.textContent) {
             const preview = node.textContent.substring(0, 20) + (node.textContent.length > 20 ? '…' : '');
-            tag = makeCyberpunkSprite(preview, node.color || '#00ffff', 6);
+            tag = makeCyberpunkSprite(preview, node.color || '#00ffff', node.textSize || 6);
           } else {
-            tag = makeCyberpunkSprite(node.id, node.color || '#00ff41', 5);
+            tag = makeCyberpunkSprite(node.id, node.color || '#00ff41', node.textSize || 5);
           }
 
           tag.position.y = node.nodeType === 'timeline' ? 9 : 8;
