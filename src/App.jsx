@@ -90,6 +90,18 @@ const LINK_TYPES = {
   ghost:  { label: 'Ghost',  color: 'rgba(255, 255, 255, 0.06)', width: 0.4, particles: 0, particleSpeed: 0,     particleWidth: 0, particleColor: '#334455' },
 };
 
+const PRESET_COLORS = [
+  { name: 'Emerald', value: '#00ff41' },
+  { name: 'Electric Cyan', value: '#00ffff' },
+  { name: 'Vibrant Pink', value: '#ff007f' },
+  { name: 'Gold', value: '#FFD700' },
+  { name: 'Royal Blue', value: '#1A75FF' },
+  { name: 'Neon Purple', value: '#8a2be2' },
+  { name: 'Vibrant Orange', value: '#ff4500' },
+  { name: 'Coral Red', value: '#ff6b6b' },
+  { name: 'Sleek White', value: '#f0f0f0' },
+];
+
 function App() {
   const graphRef = useRef();
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
@@ -566,7 +578,19 @@ function App() {
     setRecordedOGPositions({ nodes: [], links: [] });
     setCameraBookmarks([]);
     setIsDatabaseSelected(true);
-    appendConsoleLine('Started in Sandbox Mode. Changes will not be saved.');
+  };
+
+  const handleExitDatabase = () => {
+    if (window.confirm('Are you sure you want to disconnect and exit this database? Ensure your changes are saved.')) {
+      setIsDatabaseSelected(false);
+      setGraphId('default-graph');
+      setGraphData({ nodes: [], links: [] });
+      setRecordedOGPositions({ nodes: [], links: [] });
+      setCameraBookmarks([]);
+      setSelectedNodeForEdit(null);
+      setSelectedLinkForEdit(null);
+      appendConsoleLine('Disconnected from database.');
+    }
   };
 
   const handleLoadFile = () => {
@@ -2701,83 +2725,157 @@ function App() {
       {selectedNodeForEdit && (
         <FloatablePanel
           id="node-editor-panel"
-          title={`Edit Node: ${selectedNodeForEdit.id}`}
+          title={`Node Inspector: ${selectedNodeForEdit.id}`}
           defaultPosition={{ x: getPanelX("node-editor"), y: 80 }}
-          defaultSize={{ width: 280, height: 'auto' }}
+          defaultSize={{ width: 300, height: 'auto' }}
           onClose={() => {
             setSelectedNodeForEdit(null);
             setSelectedLinkForEdit(null);
           }}
         >
-          <div className="space-y-4">
-            <Button onClick={handleNextNode} size="sm" variant="outline" className="w-full">Next Node</Button>
+          <div className="space-y-5 font-sans text-zinc-200">
+            {/* Quick Actions */}
             <div className="flex gap-2">
-              <Button onClick={handleCopyNodeStyle} size="sm" variant="outline" className="flex-1">Copy Style</Button>
-              <Button onClick={handleApplyNodeStyle} size="sm" variant="outline" className="flex-1" disabled={!copiedNodeStyle}>Apply Style</Button>
-            </div>
-            <div className="space-y-1">
-              <Label>Color</Label>
-              <Input type="color" value={selectedNodeForEdit.color || '#1A75FF'} onChange={(e) => {
-                const newColor = e.target.value;
-                setGraphData(prev => ({...prev, nodes: prev.nodes.map(n => n.id === selectedNodeForEdit.id ? { ...n, color: newColor } : n)}));
-                setSelectedNodeForEdit(prev => ({ ...prev, color: newColor }));
-              }} />
-            </div>
-            <div className="space-y-2">
-              <Label>Text Size: {selectedNodeForEdit.textSize || 6}</Label>
-              <Slider
-                value={[selectedNodeForEdit.textSize || 6]}
-                onValueChange={(value) => {
-                  const newSize = value[0];
-                  setGraphData(prev => ({...prev, nodes: prev.nodes.map(n => n.id === selectedNodeForEdit.id ? { ...n, textSize: newSize } : n)}));
-                  setSelectedNodeForEdit(prev => ({ ...prev, textSize: newSize }));
-                }}
-                min={1} max={20} step={1} className="w-full"
-              />
-            </div>
-            <div className="border-t border-[#00ff4133] pt-3 space-y-2">
-              <Label>Amount / Cost ($)</Label>
-              <Input
-                type="number"
-                min="0"
-                placeholder="0.00"
-                value={selectedNodeForEdit.amount || ''}
-                onChange={(e) => {
-                  const val = e.target.value === '' ? undefined : parseFloat(e.target.value);
-                  setGraphData(prev => ({ ...prev, nodes: prev.nodes.map(n => n.id === selectedNodeForEdit.id ? { ...n, amount: val } : n) }));
-                  setSelectedNodeForEdit(prev => ({ ...prev, amount: val }));
-                }}
-              />
-              <Label>Date</Label>
-              <Input
-                type="date"
-                value={selectedNodeForEdit.date || ''}
-                onChange={(e) => {
-                  const val = e.target.value || undefined;
-                  setGraphData(prev => ({ ...prev, nodes: prev.nodes.map(n => n.id === selectedNodeForEdit.id ? { ...n, date: val } : n) }));
-                  setSelectedNodeForEdit(prev => ({ ...prev, date: val }));
-                }}
-              />
-            </div>
-            <div className="border-t border-[#00ff4133] pt-3 space-y-2">
-              <Label>Add Connected Node</Label>
-              <Input
-                placeholder="New node name..."
-                value={connectedNodeId}
-                onChange={(e) => setConnectedNodeId(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') addConnectedNode(); }}
-              />
-              <Select value={connectedLinkType} onValueChange={setConnectedLinkType}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(LINK_TYPES).map(([key, val]) => (
-                    <SelectItem key={key} value={key}>{val.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button onClick={addConnectedNode} size="sm" className="w-full" disabled={!connectedNodeId.trim()}>
-                + Create &amp; Link
+              <Button onClick={handleNextNode} size="xs" variant="outline" className="flex-1 bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 text-[10px] tracking-wider uppercase py-1 h-7">
+                Next Node
               </Button>
+              <Button onClick={handleCopyNodeStyle} size="xs" variant="outline" className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 text-[10px] tracking-wider uppercase py-1 h-7">
+                Copy
+              </Button>
+              <Button onClick={handleApplyNodeStyle} size="xs" variant="outline" className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 text-[10px] tracking-wider uppercase py-1 h-7" disabled={!copiedNodeStyle}>
+                Apply
+              </Button>
+            </div>
+
+            {/* Appearance Section */}
+            <div className="space-y-3 pt-1">
+              <span className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase block border-b border-zinc-905/30 pb-1">Appearance</span>
+              
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-zinc-400">Color Palette</Label>
+                <div className="flex flex-wrap gap-2 items-center">
+                  {PRESET_COLORS.map(c => {
+                    const isSelected = (selectedNodeForEdit.color || '#1A75FF').toLowerCase() === c.value.toLowerCase();
+                    return (
+                      <button
+                        key={c.value}
+                        onClick={() => {
+                          const newColor = c.value;
+                          setGraphData(prev => ({...prev, nodes: prev.nodes.map(n => n.id === selectedNodeForEdit.id ? { ...n, color: newColor } : n)}));
+                          setSelectedNodeForEdit(prev => ({ ...prev, color: newColor }));
+                        }}
+                        className={`w-6 h-6 rounded-full transition-transform hover:scale-110 relative flex items-center justify-center ${isSelected ? 'ring-2 ring-white ring-offset-2 ring-offset-black' : 'border border-zinc-800/60'}`}
+                        style={{ backgroundColor: c.value }}
+                        title={c.name}
+                      >
+                        {isSelected && <span className="w-1.5 h-1.5 bg-black rounded-full" />}
+                      </button>
+                    );
+                  })}
+                  {/* Custom color input wrapper */}
+                  <div className="relative w-6 h-6 rounded-full border border-zinc-800 cursor-pointer overflow-hidden transition-transform hover:scale-110" style={{ background: 'linear-gradient(45deg, red, orange, yellow, green, blue, purple)' }} title="Custom Color">
+                    <input 
+                      type="color" 
+                      value={selectedNodeForEdit.color || '#1A75FF'} 
+                      onChange={(e) => {
+                        const newColor = e.target.value;
+                        setGraphData(prev => ({...prev, nodes: prev.nodes.map(n => n.id === selectedNodeForEdit.id ? { ...n, color: newColor } : n)}));
+                        setSelectedNodeForEdit(prev => ({ ...prev, color: newColor }));
+                      }}
+                      className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-zinc-400 flex justify-between">
+                  <span>Text Size</span>
+                  <span className="text-zinc-500 font-mono">{selectedNodeForEdit.textSize || 6}px</span>
+                </Label>
+                <Slider
+                  value={[selectedNodeForEdit.textSize || 6]}
+                  onValueChange={(value) => {
+                    const newSize = value[0];
+                    setGraphData(prev => ({...prev, nodes: prev.nodes.map(n => n.id === selectedNodeForEdit.id ? { ...n, textSize: newSize } : n)}));
+                    setSelectedNodeForEdit(prev => ({ ...prev, textSize: newSize }));
+                  }}
+                  min={1} max={20} step={1} className="w-full"
+                />
+              </div>
+            </div>
+
+            {/* Data Fields Section */}
+            <div className="space-y-3 pt-1">
+              <span className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase block border-b border-zinc-905/30 pb-1">Data Fields</span>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-zinc-400">Amount / Cost</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="0.00"
+                    value={selectedNodeForEdit.amount || ''}
+                    onChange={(e) => {
+                      const val = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                      setGraphData(prev => ({ ...prev, nodes: prev.nodes.map(n => n.id === selectedNodeForEdit.id ? { ...n, amount: val } : n) }));
+                      setSelectedNodeForEdit(prev => ({ ...prev, amount: val }));
+                    }}
+                    className="bg-black/40 border-zinc-800 focus:border-zinc-700 h-8 text-xs font-mono text-zinc-200"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-zinc-400">Date</Label>
+                  <Input
+                    type="date"
+                    value={selectedNodeForEdit.date || ''}
+                    onChange={(e) => {
+                      const val = e.target.value || undefined;
+                      setGraphData(prev => ({ ...prev, nodes: prev.nodes.map(n => n.id === selectedNodeForEdit.id ? { ...n, date: val } : n) }));
+                      setSelectedNodeForEdit(prev => ({ ...prev, date: val }));
+                    }}
+                    className="bg-black/40 border-zinc-800 focus:border-zinc-700 h-8 text-xs font-mono text-zinc-200"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Relationships / Connecting Nodes */}
+            <div className="space-y-3 pt-1">
+              <span className="text-[10px] font-bold tracking-widest text-zinc-500 uppercase block border-b border-zinc-905/30 pb-1">Relationships</span>
+              
+              <div className="space-y-2">
+                <Input
+                  placeholder="New node name..."
+                  value={connectedNodeId}
+                  onChange={(e) => setConnectedNodeId(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') addConnectedNode(); }}
+                  className="bg-black/40 border-zinc-800 focus:border-zinc-700 h-8 text-xs text-zinc-200"
+                />
+                
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Select value={connectedLinkType} onValueChange={setConnectedLinkType}>
+                      <SelectTrigger className="bg-black/40 border-zinc-800 focus:border-zinc-700 h-8 text-xs text-zinc-300">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-950 border-zinc-800 text-zinc-300">
+                        {Object.entries(LINK_TYPES).map(([key, val]) => (
+                          <SelectItem key={key} value={key} className="text-xs">{val.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button 
+                    onClick={addConnectedNode} 
+                    disabled={!connectedNodeId.trim()}
+                    className="bg-[#00ffff] hover:bg-[#06b6d4] text-black font-semibold text-xs px-3 h-8"
+                  >
+                    + Link
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </FloatablePanel>
@@ -2787,70 +2885,118 @@ function App() {
       {selectedLinkForEdit && !selectedNodeForEdit && (
         <FloatablePanel
           id="link-editor-panel"
-          title="Edit Link"
+          title="Link Inspector"
           defaultPosition={{ x: getPanelX("link-editor"), y: 80 }}
-          defaultSize={{ width: 280, height: 'auto' }}
+          defaultSize={{ width: 300, height: 'auto' }}
           onClose={() => setSelectedLinkForEdit(null)}
         >
-          <div className="space-y-4">
-            <div className="text-sm font-medium">
-              {typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source} → {typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target}
+          <div className="space-y-5 font-sans text-zinc-200">
+            {/* Header path detail */}
+            <div className="text-[11px] font-mono text-zinc-400 bg-zinc-900/40 p-2 rounded border border-zinc-900/65 flex items-center justify-center gap-2">
+              <span className="text-zinc-100 font-bold truncate max-w-[100px]">{typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source}</span>
+              <span className="text-[#00ffff]">→</span>
+              <span className="text-zinc-100 font-bold truncate max-w-[100px]">{typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target}</span>
             </div>
-            <div className="space-y-1">
-              <Label>Link Type</Label>
-              <Select
-                value={selectedLinkForEdit.linkType || 'wire'}
-                onValueChange={(val) => {
-                  const lt = LINK_TYPES[val] || LINK_TYPES.wire;
-                  const sSourceId = typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source;
-                  const sTargetId = typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target;
-                  setGraphData(prev => ({...prev, links: prev.links.map(l => {
-                    const lSourceId = typeof l.source === 'object' ? l.source.id : l.source;
-                    const lTargetId = typeof l.target === 'object' ? l.target.id : l.target;
-                    return (lSourceId === sSourceId && lTargetId === sTargetId) ? { ...l, linkType: val, color: lt.color, thickness: lt.width } : l;
-                  })}));
-                  setSelectedLinkForEdit(prev => ({ ...prev, linkType: val, color: lt.color, thickness: lt.width }));
-                }}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(LINK_TYPES).map(([key, v]) => (
-                    <SelectItem key={key} value={key}>{v.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label>Color</Label>
-              <Input type="color" value={selectedLinkForEdit.color || '#F0F0F0'} onChange={(e) => {
-                const newColor = e.target.value;
-                setGraphData(prev => ({...prev, links: prev.links.map(l => {
-                  const lSourceId = typeof l.source === 'object' ? l.source.id : l.source;
-                  const lTargetId = typeof l.target === 'object' ? l.target.id : l.target;
-                  const sSourceId = typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source;
-                  const sTargetId = typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target;
-                  return (lSourceId === sSourceId && lTargetId === sTargetId) ? { ...l, color: newColor } : l;
-                })}));
-                setSelectedLinkForEdit(prev => ({ ...prev, color: newColor }));
-              }} />
-            </div>
-            <div className="space-y-2">
-              <Label>Thickness: {selectedLinkForEdit.thickness || 1}</Label>
-              <Slider
-                value={[selectedLinkForEdit.thickness || 1]}
-                onValueChange={(value) => {
-                  const newThickness = value[0];
-                  setGraphData(prev => ({...prev, links: prev.links.map(l => {
-                    const lSourceId = typeof l.source === 'object' ? l.source.id : l.source;
-                    const lTargetId = typeof l.target === 'object' ? l.target.id : l.target;
+
+            {/* Settings Section */}
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-zinc-400">Link Connection Type</Label>
+                <Select
+                  value={selectedLinkForEdit.linkType || 'wire'}
+                  onValueChange={(val) => {
+                    const lt = LINK_TYPES[val] || LINK_TYPES.wire;
                     const sSourceId = typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source;
                     const sTargetId = typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target;
-                    return (lSourceId === sSourceId && lTargetId === sTargetId) ? { ...l, thickness: newThickness } : l;
-                  })}));
-                  setSelectedLinkForEdit(prev => ({ ...prev, thickness: newThickness }));
-                }}
-                min={0.1} max={10} step={0.1} className="w-full"
-              />
+                    setGraphData(prev => ({...prev, links: prev.links.map(l => {
+                      const lSourceId = typeof l.source === 'object' ? l.source.id : l.source;
+                      const lTargetId = typeof l.target === 'object' ? l.target.id : l.target;
+                      return (lSourceId === sSourceId && lTargetId === sTargetId) ? { ...l, linkType: val, color: lt.color, thickness: lt.width } : l;
+                    })}));
+                    setSelectedLinkForEdit(prev => ({ ...prev, linkType: val, color: lt.color, thickness: lt.width }));
+                  }}
+                >
+                  <SelectTrigger className="bg-black/40 border-zinc-800 focus:border-zinc-700 h-8 text-xs text-zinc-300">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-zinc-950 border-zinc-800 text-zinc-300">
+                    {Object.entries(LINK_TYPES).map(([key, v]) => (
+                      <SelectItem key={key} value={key} className="text-xs">{v.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-zinc-400">Color Palette</Label>
+                <div className="flex flex-wrap gap-2 items-center">
+                  {PRESET_COLORS.map(c => {
+                    const isSelected = (selectedLinkForEdit.color || '#F0F0F0').toLowerCase() === c.value.toLowerCase();
+                    return (
+                      <button
+                        key={c.value}
+                        onClick={() => {
+                          const newColor = c.value;
+                          const sSourceId = typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source;
+                          const sTargetId = typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target;
+                          setGraphData(prev => ({...prev, links: prev.links.map(l => {
+                            const lSourceId = typeof l.source === 'object' ? l.source.id : l.source;
+                            const lTargetId = typeof l.target === 'object' ? l.target.id : l.target;
+                            return (lSourceId === sSourceId && lTargetId === sTargetId) ? { ...l, color: newColor } : l;
+                          })}));
+                          setSelectedLinkForEdit(prev => ({ ...prev, color: newColor }));
+                        }}
+                        className={`w-6 h-6 rounded-full transition-transform hover:scale-110 relative flex items-center justify-center ${isSelected ? 'ring-2 ring-white ring-offset-2 ring-offset-black' : 'border border-zinc-800/60'}`}
+                        style={{ backgroundColor: c.value }}
+                        title={c.name}
+                      >
+                        {isSelected && <span className="w-1.5 h-1.5 bg-black rounded-full" />}
+                      </button>
+                    );
+                  })}
+                  {/* Custom color input wrapper */}
+                  <div className="relative w-6 h-6 rounded-full border border-zinc-800 cursor-pointer overflow-hidden transition-transform hover:scale-110" style={{ background: 'linear-gradient(45deg, red, orange, yellow, green, blue, purple)' }} title="Custom Color">
+                    <input 
+                      type="color" 
+                      value={selectedLinkForEdit.color || '#F0F0F0'} 
+                      onChange={(e) => {
+                        const newColor = e.target.value;
+                        const sSourceId = typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source;
+                        const sTargetId = typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target;
+                        setGraphData(prev => ({...prev, links: prev.links.map(l => {
+                          const lSourceId = typeof l.source === 'object' ? l.source.id : l.source;
+                          const lTargetId = typeof l.target === 'object' ? l.target.id : l.target;
+                          return (lSourceId === sSourceId && lTargetId === sTargetId) ? { ...l, color: newColor } : l;
+                        })}));
+                        setSelectedLinkForEdit(prev => ({ ...prev, color: newColor }));
+                      }}
+                      className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-zinc-400 flex justify-between">
+                  <span>Thickness</span>
+                  <span className="text-zinc-500 font-mono">{selectedLinkForEdit.thickness || 1}px</span>
+                </Label>
+                <Slider
+                  value={[selectedLinkForEdit.thickness || 1]}
+                  onValueChange={(value) => {
+                    const newThickness = value[0];
+                    setGraphData(prev => ({...prev, links: prev.links.map(l => {
+                      const lSourceId = typeof l.source === 'object' ? l.source.id : l.source;
+                      const lTargetId = typeof l.target === 'object' ? l.target.id : l.target;
+                      const sSourceId = typeof selectedLinkForEdit.source === 'object' ? selectedLinkForEdit.source.id : selectedLinkForEdit.source;
+                      const sTargetId = typeof selectedLinkForEdit.target === 'object' ? selectedLinkForEdit.target.id : selectedLinkForEdit.target;
+                      return (lSourceId === sSourceId && lTargetId === sTargetId) ? { ...l, thickness: newThickness } : l;
+                    })}));
+                    setSelectedLinkForEdit(prev => ({ ...prev, thickness: newThickness }));
+                  }}
+                  min={0.1} max={10} step={0.1} className="w-full"
+                />
+              </div>
             </div>
           </div>
         </FloatablePanel>
@@ -2961,21 +3107,94 @@ function App() {
         </div>
       </div>
 
-      {/* Master Toggle Menu */}
-      <div className="absolute top-5 left-1/2 -translate-x-1/2 z-50 flex max-w-[95vw] flex-col items-center gap-2">
-        <div className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-zinc-500/70 bg-zinc-900/70 p-3 shadow-2xl backdrop-blur-md">
-        <Button className="text-base px-4 py-2 h-auto" variant={showConsole ? "default" : "outline"} onClick={() => setShowConsole(prev => !prev)}>Console</Button>
-        <Button className="text-base px-4 py-2 h-auto" variant={showFileOps ? "default" : "outline"} onClick={() => setShowFileOps(prev => !prev)}>Files</Button>
-        <Button className="text-base px-4 py-2 h-auto" variant={showNavigator ? "default" : "outline"} onClick={() => setShowNavigator(prev => !prev)}>Navigator</Button>
-        <Button className="text-base px-4 py-2 h-auto" variant={showAddNode ? "default" : "outline"} onClick={() => setShowAddNode(prev => !prev)}>+ Node</Button>
-        <Button className="text-base px-4 py-2 h-auto" variant={showDeleteNode ? "default" : "outline"} onClick={() => setShowDeleteNode(prev => !prev)}>- Node</Button>
-        <Button className="text-base px-4 py-2 h-auto" variant={showAddLink ? "default" : "outline"} onClick={() => setShowAddLink(prev => !prev)}>Link</Button>
-        <Button className="text-base px-4 py-2 h-auto" variant={showTimeline ? "default" : "outline"} onClick={() => setShowTimeline(prev => !prev)}>Timeline</Button>
-        <Button className="text-base px-4 py-2 h-auto" variant={showDashboard ? "default" : "outline"} onClick={() => setShowDashboard(prev => !prev)}>Dashboard</Button>
+      {/* Master Toggle Menu (Toolbar Dock) */}
+      <div className="absolute top-5 left-1/2 -translate-x-1/2 z-50 flex max-w-[95vw] flex-col items-center gap-2.5">
+        <div className="flex flex-wrap items-center justify-center gap-2 rounded-full border border-zinc-800/80 bg-zinc-950/80 p-2 px-3 shadow-2xl backdrop-blur-xl">
+          
+          {/* Workspace Views */}
+          <button 
+            onClick={() => setShowConsole(prev => !prev)}
+            className={`px-3.5 py-1.5 rounded-full text-[10px] font-sans font-semibold uppercase tracking-wider transition-all duration-300 ${showConsole ? 'bg-emerald-500/15 text-[#00ff41] border border-emerald-500/30 shadow-[0_0_10px_rgba(0,255,65,0.05)]' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50 border border-transparent'}`}
+          >
+            Console
+          </button>
+          <button 
+            onClick={() => setShowFileOps(prev => !prev)}
+            className={`px-3.5 py-1.5 rounded-full text-[10px] font-sans font-semibold uppercase tracking-wider transition-all duration-300 ${showFileOps ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.05)]' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50 border border-transparent'}`}
+          >
+            Files
+          </button>
+          <button 
+            onClick={() => setShowNavigator(prev => !prev)}
+            className={`px-3.5 py-1.5 rounded-full text-[10px] font-sans font-semibold uppercase tracking-wider transition-all duration-300 ${showNavigator ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.05)]' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50 border border-transparent'}`}
+          >
+            Navigator
+          </button>
+          
+          {/* Divider */}
+          <div className="w-px h-4 bg-zinc-800/80 mx-1" />
+          
+          {/* Node Actions */}
+          <button 
+            onClick={() => setShowAddNode(prev => !prev)}
+            className={`px-3.5 py-1.5 rounded-full text-[10px] font-sans font-semibold uppercase tracking-wider transition-all duration-300 ${showAddNode ? 'bg-zinc-800 text-zinc-100 border border-zinc-700' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50 border border-transparent'}`}
+          >
+            + Node
+          </button>
+          <button 
+            onClick={() => setShowDeleteNode(prev => !prev)}
+            className={`px-3.5 py-1.5 rounded-full text-[10px] font-sans font-semibold uppercase tracking-wider transition-all duration-300 ${showDeleteNode ? 'bg-red-500/15 text-red-400 border border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.05)]' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50 border border-transparent'}`}
+          >
+            - Node
+          </button>
+          <button 
+            onClick={() => setShowAddLink(prev => !prev)}
+            className={`px-3.5 py-1.5 rounded-full text-[10px] font-sans font-semibold uppercase tracking-wider transition-all duration-300 ${showAddLink ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.05)]' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50 border border-transparent'}`}
+          >
+            Link
+          </button>
+          <button 
+            onClick={() => setShowTimeline(prev => !prev)}
+            className={`px-3.5 py-1.5 rounded-full text-[10px] font-sans font-semibold uppercase tracking-wider transition-all duration-300 ${showTimeline ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.05)]' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50 border border-transparent'}`}
+          >
+            Timeline
+          </button>
+          
+          {/* Divider */}
+          <div className="w-px h-4 bg-zinc-800/80 mx-1" />
+          
+          {/* Dashboard View */}
+          <button 
+            onClick={() => setShowDashboard(prev => !prev)}
+            className={`px-3.5 py-1.5 rounded-full text-[10px] font-sans font-semibold uppercase tracking-wider transition-all duration-300 ${showDashboard ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30 shadow-[0_0_10px_rgba(168,85,247,0.05)]' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50 border border-transparent'}`}
+          >
+            Dashboard
+          </button>
+
+          {/* Divider */}
+          <div className="w-px h-4 bg-zinc-800/80 mx-1" />
+
+          {/* Save & Exit Control Group */}
+          <div className="flex items-center gap-1.5">
+            <button 
+              onClick={() => saveGraphToCloud()}
+              disabled={isSavingCloud}
+              className="px-3.5 py-1.5 rounded-full text-[10px] font-sans font-semibold uppercase tracking-wider transition-all duration-300 border border-emerald-500/35 bg-emerald-500/10 text-[#00ff41] hover:bg-emerald-500/20 active:scale-95 disabled:opacity-50"
+            >
+              {isSavingCloud ? 'Saving...' : 'Save'}
+            </button>
+            <button 
+              onClick={handleExitDatabase}
+              className="px-3.5 py-1.5 rounded-full text-[10px] font-sans font-semibold uppercase tracking-wider transition-all duration-300 border border-red-500/35 bg-red-500/10 text-red-400 hover:bg-red-500/20 active:scale-95"
+            >
+              Exit
+            </button>
+          </div>
+
         </div>
         {groupNames.length > 0 && (
-          <div className="flex max-w-[95vw] flex-wrap items-center justify-center gap-2 rounded-2xl border border-zinc-600/70 bg-black/40 px-3 py-2 backdrop-blur-sm">
-            <span className="text-xs uppercase tracking-wide text-zinc-300">Groups</span>
+          <div className="flex max-w-[95vw] flex-wrap items-center justify-center gap-2 rounded-full border border-zinc-800/80 bg-black/40 px-3 py-1.5 backdrop-blur-sm">
+            <span className="text-[10px] font-sans font-semibold uppercase tracking-wider text-zinc-500">Groups:</span>
             {groupNames.map((groupName) => {
               const isVisible = !hiddenGroups.has(groupName);
               return (
@@ -2983,7 +3202,7 @@ function App() {
                   key={groupName}
                   type="button"
                   onClick={() => toggleGroupVisibility(groupName)}
-                  className={`rounded-full border px-3 py-1 text-xs transition ${isVisible ? 'border-emerald-400/80 bg-emerald-500/20 text-emerald-100' : 'border-zinc-500 bg-zinc-900/80 text-zinc-400 line-through'}`}
+                  className={`rounded-full px-2.5 py-0.5 text-[9px] font-sans font-semibold uppercase tracking-wide transition border ${isVisible ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-300' : 'border-zinc-800 bg-zinc-950/60 text-zinc-500 line-through'}`}
                 >
                   {groupName}
                 </button>
@@ -2992,13 +3211,12 @@ function App() {
             <button
               type="button"
               onClick={showAllGroups}
-              className="rounded-full border border-zinc-400 px-3 py-1 text-xs text-zinc-200 hover:bg-zinc-700/60"
+              className="rounded-full border border-zinc-700 px-2.5 py-0.5 text-[9px] font-sans font-semibold uppercase tracking-wide text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
             >
               Show all
             </button>
           </div>
         )}
-        <p className="text-xs text-zinc-300 bg-black/50 px-2 py-1 rounded">Mobile: use the Console button to toggle the panel.</p>
       </div>
     </div>
   );
