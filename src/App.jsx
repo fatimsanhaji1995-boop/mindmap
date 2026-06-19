@@ -24,19 +24,19 @@ function makeCyberpunkSprite(text, color = '#00ff41', textHeight = 6, isTimeline
   const cacheKey = `${text}||${color}||${textHeight}||${isTimeline}`;
   if (_spriteCache.has(cacheKey)) return _spriteCache.get(cacheKey).clone();
 
-  const fontSize = 44;
-  const font = `bold ${fontSize}px "Courier New", monospace`;
+  const fontSize = 42;
+  const font = `bold ${fontSize}px "Segoe UI", "Inter", -apple-system, sans-serif`;
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   ctx.font = font;
   const textW = Math.ceil(ctx.measureText(text).width);
   
-  const padX = 24;
-  const padY = 16;
+  const padX = 22;
+  const padY = 12;
   const w = textW + padX * 2;
   const h = fontSize + padY * 2;
   
-  canvas.width  = w + 24; // Extra space for shadow glow
+  canvas.width  = w + 24; // Extra space for drop shadow
   canvas.height = h + 24;
   ctx.font = font;
   ctx.textBaseline = 'middle';
@@ -45,15 +45,14 @@ function makeCyberpunkSprite(text, color = '#00ff41', textHeight = 6, isTimeline
   const cx = canvas.width / 2;
   const cy = canvas.height / 2;
   
-  // Set glow shadow styles
-  ctx.shadowColor = color;
-  ctx.shadowBlur = 12;
+  // Set subtle drop shadow for the capsule pill to float off the 3D space
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 4;
   
-  // Draw capsule background
-  ctx.fillStyle = isTimeline ? 'rgba(255, 215, 0, 0.12)' : 'rgba(0, 255, 65, 0.05)';
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 3;
-  
+  // Draw sleek borderless dark frosted glass background
+  ctx.fillStyle = 'rgba(15, 15, 18, 0.88)';
   const r = h / 2;
   ctx.beginPath();
   ctx.arc(cx - w/2 + r, cy - h/2 + r, r, Math.PI * 0.5, Math.PI * 1.5);
@@ -61,11 +60,13 @@ function makeCyberpunkSprite(text, color = '#00ff41', textHeight = 6, isTimeline
   ctx.arc(cx + w/2 - r, cy - h/2 + r, r, Math.PI * 1.5, Math.PI * 0.5);
   ctx.closePath();
   ctx.fill();
-  ctx.stroke();
   
-  // Draw Text with neon glow
-  ctx.shadowBlur = 4;
-  ctx.fillStyle = isTimeline ? '#FFD700' : '#ffffff';
+  // Draw text with sharp typography and a subtle shadow for contrast
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+  ctx.shadowBlur = 3;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 1;
+  ctx.fillStyle = color;
   ctx.fillText(text, cx, cy);
   
   const texture  = new THREE.CanvasTexture(canvas);
