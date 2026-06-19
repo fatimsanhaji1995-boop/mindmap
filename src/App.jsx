@@ -106,6 +106,9 @@ function App() {
   const [showFileOps, setShowFileOps] = useState(false);
   const [showTimeline, setShowTimeline] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
+  const [showNavigator, setShowNavigator] = useState(false);
+  const [navigatorSearch, setNavigatorSearch] = useState('');
+  const [newBookmarkName, setNewBookmarkName] = useState('');
   const [timelineGranularity, setTimelineGranularity] = useState('month');
   const [timelineYear, setTimelineYear] = useState(new Date().getFullYear());
   const [timelineRange, setTimelineRange] = useState('full');
@@ -113,9 +116,10 @@ function App() {
 
   // Dynamic panel positioning logic
   const getPanelX = (panelId) => {
-    const panelOrder = ['file-ops', 'add-node', 'delete-node', 'add-link', 'timeline', 'node-editor', 'link-editor'];
+    const panelOrder = ['file-ops', 'navigator', 'add-node', 'delete-node', 'add-link', 'timeline', 'node-editor', 'link-editor'];
     const panelStates = {
       'file-ops': showFileOps,
+      'navigator': showNavigator,
       'add-node': showAddNode,
       'delete-node': showDeleteNode,
       'add-link': showAddLink,
@@ -1420,6 +1424,30 @@ function App() {
     }
   }, [selectedLinkForEdit, copiedLinkStyle]);
 
+  const flyToNode = useCallback((node) => {
+    if (!node || !graphRef.current) return;
+    
+    const nodeX = node.x ?? 0;
+    const nodeY = node.y ?? 0;
+    const nodeZ = node.z ?? 0;
+    
+    // Zoom closer for standard nodes, slightly further back for timelines
+    const distance = node.nodeType === 'timeline' ? 90 : 50;
+    const distRatio = 1 + distance / Math.hypot(nodeX, nodeY, nodeZ);
+    
+    const newPos = nodeX || nodeY || nodeZ
+      ? { x: nodeX * distRatio, y: nodeY * distRatio, z: nodeZ * distRatio }
+      : { x: 0, y: 0, z: distance };
+
+    graphRef.current.cameraPosition(
+      newPos,
+      { x: nodeX, y: nodeY, z: nodeZ },
+      2500 // Transition duration in ms
+    );
+    
+    appendConsoleLine(`Flying camera to node: ${node.id}`);
+  }, [appendConsoleLine]);
+
   const handleNodeClick = useCallback((node, event) => {
     // Check if Ctrl+Click (or Cmd+Click on Mac) for collapse/expand
     if ((event && (event.ctrlKey || event.metaKey)) || collapseMode) {
@@ -1430,19 +1458,7 @@ function App() {
     }
     
     if (isFocusMode) {
-      // Focus on the clicked node
-      const distance = 40;
-      const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
-
-      const newPos = node.x || node.y || node.z
-        ? { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }
-        : { x: 0, y: 0, z: distance }; // special case if node is in (0,0,0)
-
-      graphRef.current.cameraPosition(
-        newPos, // new position
-        node, // lookAt ({ x, y, z })
-        3000  // ms transition duration
-      );
+      flyToNode(node);
     } else if (isLinkSelectionMode) {
       // Click mode for link creation: select nodes by clicking
       setSelectedNodes(prevSelected => {
@@ -1462,7 +1478,7 @@ function App() {
       setSelectedNodeForEdit(node);
       setSelectedLinkForEdit(null); // Reset selected link
     }
-  }, [isFocusMode, isLinkSelectionMode, collapseMode, collapsedNodes]);
+  }, [isFocusMode, isLinkSelectionMode, collapseMode, collapsedNodes, flyToNode]);
 
   const handleLinkClick = useCallback(link => {
     setSelectedLinkForEdit(link);
@@ -1974,7 +1990,126 @@ function App() {
         backgroundColor="#000000"
       />
 
-{/* Modular Control Panels */}
+      {showNavigator && (
+        <FloatablePanel
+          id="navigator-panel"
+          title="Quick Navigation & Bookmarks"
+          defaultPosition={{ x: getPanelX("navigator"), y: 80 }}
+          defaultSize={{ width: 280, height: 420 }}
+          minWidth={250}
+          minHeight={300}
+          onClose={() => setShowNavigator(false)}
+        >
+          <div className="space-y-4 text-xs font-mono text-zinc-100 custom-scrollbar overflow-y-auto max-h-[80vh]">
+            {/* 1. Node Finder Search */}
+            <div className="space-y-2">
+              <Label className="text-[10px] text-[#00ff41] uppercase tracking-wider">Find Node</Label>
+              <Input
+                placeholder="Search node ID..."
+                value={navigatorSearch}
+                onChange={e => setNavigatorSearch(e.target.value)}
+                className="bg-black/40 border-zinc-700 text-[#00ff41] font-mono focus:border-[#00ff41]"
+              />
+              <div className="border border-zinc-800/80 bg-black/20 rounded divide-y divide-zinc-800 max-h-40 overflow-y-auto custom-scrollbar">
+                {graphData.nodes
+                  .filter(node => !node.isPreview && (!navigatorSearch || node.id.toLowerCase().includes(navigatorSearch.toLowerCase())))
+                  .map(node => (
+                    <div key={node.id} className="flex items-center justify-between p-2 hover:bg-zinc-800/40">
+                      <div className="truncate pr-2">
+                        <span className="text-zinc-100 font-bold block truncate">{node.id}</span>
+                        <span className="text-[9px] text-zinc-500 uppercase tracking-widest">{node.nodeType || 'standard'}</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => flyToNode(node)}
+                        className="text-[#00ff41] border-[#00ff4133] hover:bg-[#00ff411a] px-2 py-0.5 h-auto text-[10px]"
+                      >
+                        Fly
+                      </Button>
+                    </div>
+                  ))}
+                {graphData.nodes.filter(node => !node.isPreview && (!navigatorSearch || node.id.toLowerCase().includes(navigatorSearch.toLowerCase()))).length === 0 && (
+                  <div className="p-2 text-zinc-500 text-center">No nodes found</div>
+                )}
+              </div>
+            </div>
+
+            <Separator className="border-zinc-800" />
+
+            {/* 2. Camera Viewport Bookmarks */}
+            <div className="space-y-2">
+              <Label className="text-[10px] text-[#00ffff] uppercase tracking-wider">Viewport Bookmarks</Label>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="View name..."
+                  value={newBookmarkName}
+                  onChange={e => setNewBookmarkName(e.target.value)}
+                  className="bg-black/40 border-zinc-700 text-[#00ffff] font-mono focus:border-[#00ffff] h-7 text-xs"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const name = newBookmarkName.trim();
+                    if (!name) return;
+                    const cam = graphRef.current.camera();
+                    const lookAt = graphRef.current.controls().target;
+                    const bookmark = {
+                      name,
+                      position: { x: cam.position.x, y: cam.position.y, z: cam.position.z },
+                      lookAt: { x: lookAt.x, y: lookAt.y, z: lookAt.z },
+                      up: { x: cam.up.x, y: cam.up.y, z: cam.up.z },
+                      zoom: cam.zoom,
+                      isOrthographic: cam.isOrthographicCamera,
+                    };
+                    setCameraBookmarks(others => [...others.filter(b => b.name !== name), bookmark]);
+                    setNewBookmarkName('');
+                    appendConsoleLine(`Captured view bookmark: ${name}`);
+                  }}
+                  className="text-[#00ffff] border-[#00ffff33] hover:bg-[#00ffff1a] h-7 px-3 text-[10px]"
+                  variant="outline"
+                >
+                  Capture
+                </Button>
+              </div>
+
+              <div className="border border-zinc-800/80 bg-black/20 rounded divide-y divide-zinc-800 max-h-36 overflow-y-auto custom-scrollbar">
+                {cameraBookmarks.map(bookmark => (
+                  <div key={bookmark.name} className="flex items-center justify-between p-2 hover:bg-zinc-800/40">
+                    <span className="truncate text-zinc-100 font-bold pr-2">{bookmark.name}</span>
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setCameraView(bookmark.position, bookmark.lookAt, bookmark.up, bookmark.zoom, bookmark.isOrthographic);
+                          appendConsoleLine(`Loaded view bookmark: ${bookmark.name}`);
+                        }}
+                        className="text-[#00ffff] border-[#00ffff33] hover:bg-[#00ffff1a] px-2 py-0.5 h-auto text-[10px]"
+                      >
+                        Go
+                      </Button>
+                      <button
+                        onClick={() => {
+                          setCameraBookmarks(others => others.filter(b => b.name !== bookmark.name));
+                          appendConsoleLine(`Deleted view bookmark: ${bookmark.name}`);
+                        }}
+                        className="text-red-500 hover:text-red-300 px-1 text-xs"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {cameraBookmarks.length === 0 && (
+                  <div className="p-2 text-zinc-500 text-center">No bookmarks saved</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </FloatablePanel>
+      )}
+
       {showFileOps && (
         <FloatablePanel
           id="file-ops-panel"
@@ -2582,6 +2717,7 @@ function App() {
         <div className="flex flex-wrap items-center justify-center gap-3 rounded-2xl border border-zinc-500/70 bg-zinc-900/70 p-3 shadow-2xl backdrop-blur-md">
         <Button className="text-base px-4 py-2 h-auto" variant={showConsole ? "default" : "outline"} onClick={() => setShowConsole(prev => !prev)}>Console</Button>
         <Button className="text-base px-4 py-2 h-auto" variant={showFileOps ? "default" : "outline"} onClick={() => setShowFileOps(prev => !prev)}>Files</Button>
+        <Button className="text-base px-4 py-2 h-auto" variant={showNavigator ? "default" : "outline"} onClick={() => setShowNavigator(prev => !prev)}>Navigator</Button>
         <Button className="text-base px-4 py-2 h-auto" variant={showAddNode ? "default" : "outline"} onClick={() => setShowAddNode(prev => !prev)}>+ Node</Button>
         <Button className="text-base px-4 py-2 h-auto" variant={showDeleteNode ? "default" : "outline"} onClick={() => setShowDeleteNode(prev => !prev)}>- Node</Button>
         <Button className="text-base px-4 py-2 h-auto" variant={showAddLink ? "default" : "outline"} onClick={() => setShowAddLink(prev => !prev)}>Link</Button>
