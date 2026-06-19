@@ -1598,6 +1598,60 @@ function App() {
     return () => clearTimeout(t);
   }, []);
 
+  const handlePaste = useCallback(async (event) => {
+    const activeTag = document.activeElement?.tagName;
+    const isTypingField = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || document.activeElement?.isContentEditable;
+    
+    // Only handle paste if not in a text input field
+    if (isTypingField) return;
+    
+    event.preventDefault();
+    
+    try {
+      const pastedData = await parseClipboardData(event);
+      
+      // If nothing was pasted, return
+      if (!pastedData.images.length && !pastedData.text && !pastedData.urls.length) {
+        return;
+      }
+      
+      // Get camera position to place nodes in front of camera
+      const graph = graphRef.current;
+      if (!graph) return;
+      
+      const cam = graph.camera();
+      const dir = cam.getWorldDirection(new THREE.Vector3());
+      const pastePosition = {
+        x: cam.position.x + dir.x * 80,
+        y: cam.position.y + dir.y * 80,
+        z: cam.position.z + dir.z * 80,
+      };
+      
+      // Create nodes from pasted content
+      const existingNodeIds = graphData.nodes.map(n => n.id);
+      const newNodes = createNodesFromPaste(pastedData, pastePosition, existingNodeIds);
+      
+      if (newNodes.length === 0) return;
+      
+      // Add nodes to graph
+      setGraphData(prev => ({
+        ...prev,
+        nodes: [...prev.nodes, ...newNodes],
+      }));
+      
+      // Provide feedback
+      const summary = [];
+      if (pastedData.images.length) summary.push(`${pastedData.images.length} image(s)`);
+      if (pastedData.text) summary.push('text');
+      if (pastedData.urls.length) summary.push(`${pastedData.urls.length} link(s)`);
+      
+      appendConsoleLine(`✓ Pasted: ${summary.join(', ')} (${newNodes.length} node(s) created)`);
+    } catch (error) {
+      console.error('Error handling paste:', error);
+      appendConsoleLine('Error pasting content');
+    }
+  }, [graphData.nodes, appendConsoleLine]);
+
   useEffect(() => {
     const handleGlobalKeydown = (event) => {
       const activeTag = document.activeElement?.tagName;
@@ -1653,60 +1707,6 @@ function App() {
       window.removeEventListener('paste', handlePaste);
     };
   }, [handlePaste]);
-
-  const handlePaste = useCallback(async (event) => {
-    const activeTag = document.activeElement?.tagName;
-    const isTypingField = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || document.activeElement?.isContentEditable;
-    
-    // Only handle paste if not in a text input field
-    if (isTypingField) return;
-    
-    event.preventDefault();
-    
-    try {
-      const pastedData = await parseClipboardData(event);
-      
-      // If nothing was pasted, return
-      if (!pastedData.images.length && !pastedData.text && !pastedData.urls.length) {
-        return;
-      }
-      
-      // Get camera position to place nodes in front of camera
-      const graph = graphRef.current;
-      if (!graph) return;
-      
-      const cam = graph.camera();
-      const dir = cam.getWorldDirection(new THREE.Vector3());
-      const pastePosition = {
-        x: cam.position.x + dir.x * 80,
-        y: cam.position.y + dir.y * 80,
-        z: cam.position.z + dir.z * 80,
-      };
-      
-      // Create nodes from pasted content
-      const existingNodeIds = graphData.nodes.map(n => n.id);
-      const newNodes = createNodesFromPaste(pastedData, pastePosition, existingNodeIds);
-      
-      if (newNodes.length === 0) return;
-      
-      // Add nodes to graph
-      setGraphData(prev => ({
-        ...prev,
-        nodes: [...prev.nodes, ...newNodes],
-      }));
-      
-      // Provide feedback
-      const summary = [];
-      if (pastedData.images.length) summary.push(`${pastedData.images.length} image(s)`);
-      if (pastedData.text) summary.push('text');
-      if (pastedData.urls.length) summary.push(`${pastedData.urls.length} link(s)`);
-      
-      appendConsoleLine(`✓ Pasted: ${summary.join(', ')} (${newNodes.length} node(s) created)`);
-    } catch (error) {
-      console.error('Error handling paste:', error);
-      appendConsoleLine('Error pasting content');
-    }
-  }, [graphData.nodes, appendConsoleLine]);
 
   const commitInlineNode = useCallback(() => {
     const id = inlineNodeText.trim();
