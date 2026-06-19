@@ -115,6 +115,13 @@ function App() {
   const [timelineRange, setTimelineRange] = useState('full');
   const [timelineSpacingY, setTimelineSpacingY] = useState(200);
 
+  // Database Selector States
+  const [isDatabaseSelected, setIsDatabaseSelected] = useState(false);
+  const [dbCatalog, setDbCatalog] = useState([]);
+  const [isLoadingCatalog, setIsLoadingCatalog] = useState(true);
+  const [catalogError, setCatalogError] = useState('');
+  const [newDbId, setNewDbId] = useState('');
+
   // Dynamic panel positioning logic
   const getPanelX = (panelId) => {
     const panelOrder = ['file-ops', 'navigator', 'add-node', 'delete-node', 'add-link', 'timeline', 'node-editor', 'link-editor'];
@@ -308,21 +315,22 @@ function App() {
   }, []);
 
 
-  // Sample data for testing
+  // Load database catalog on mount and whenever the user logs in/out
   useEffect(() => {
-    const sampleData = {
-      nodes: [
-        { id: 'Node1', color: '#1A75FF', textSize: 6, x: 0, y: 0, z: 0 },
-        { id: 'Node2', color: '#FF6B6B', textSize: 6, x: 50, y: 0, z: 0 },
-        { id: 'Node3', color: '#4ECDC4', textSize: 6, x: 25, y: 50, z: 0 }
-      ],
-      links: [
-        { source: 'Node1', target: 'Node2', color: '#F0F0F0', thickness: 5 },
-        { source: 'Node2', target: 'Node3', color: '#F0F0F0', thickness: 1 }
-      ]
+    const loadCatalog = async () => {
+      try {
+        setIsLoadingCatalog(true);
+        const list = await fetchGraphCatalog();
+        setDbCatalog(list);
+      } catch (err) {
+        console.error('Failed to load database catalog:', err);
+        setCatalogError(err.message || 'Failed to retrieve list of databases');
+      } finally {
+        setIsLoadingCatalog(false);
+      }
     };
-    setGraphData(sampleData);
-  }, []);
+    loadCatalog();
+  }, [currentUser]);
 
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -475,6 +483,90 @@ function App() {
     } finally {
       setIsLoadingCloud(false);
     }
+  };
+
+  const handleSelectDatabase = async (id) => {
+    setIsLoadingCloud(true);
+    try {
+      const response = await fetch(`/api/graphs/${encodeURIComponent(id)}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        alert(payload.error || 'Failed to load graph.');
+        return;
+      }
+      setGraphId(id);
+      const normalized = normalizeGraphData(payload.graph.data);
+      setGraphData(normalized);
+      setRecordedOGPositions(normalizeOGSnapshot(payload.graph.data?.ogSnapshot));
+      setCameraBookmarks(normalizeCameraBookmarks(payload.graph.data?.cameraBookmarks));
+      setIsDatabaseSelected(true);
+      appendConsoleLine(`Connected to database: ${id}`);
+    } catch (err) {
+      console.error(err);
+      alert('Network error while loading graph.');
+    } finally {
+      setIsLoadingCloud(false);
+    }
+  };
+
+  const handleCreateDatabase = async () => {
+    const id = newDbId.trim();
+    if (!id) {
+      alert('Please enter a database name.');
+      return;
+    }
+    if (dbCatalog.some(db => db.id.toLowerCase() === id.toLowerCase())) {
+      alert('A database with this name already exists. Please choose a different name.');
+      return;
+    }
+
+    setGraphId(id);
+    setGraphData({ nodes: [], links: [] });
+    setRecordedOGPositions({ nodes: [], links: [] });
+    setCameraBookmarks([]);
+    setIsDatabaseSelected(true);
+    appendConsoleLine(`Initialized new database: ${id}`);
+
+    try {
+      await fetch(`/api/graphs/${encodeURIComponent(id)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          graph: {
+            id,
+            data: { nodes: [], links: [], ogSnapshot: { nodes: [], links: [] }, cameraBookmarks: [] }
+          }
+        }),
+        credentials: 'include',
+      });
+      const updatedList = await fetchGraphCatalog();
+      setDbCatalog(updatedList);
+    } catch (err) {
+      console.error('Failed to pre-register database:', err);
+    }
+  };
+
+  const handleStartSandbox = () => {
+    const sampleData = {
+      nodes: [
+        { id: 'Node1', color: '#1A75FF', textSize: 6, x: 0, y: 0, z: 0 },
+        { id: 'Node2', color: '#FF6B6B', textSize: 6, x: 50, y: 0, z: 0 },
+        { id: 'Node3', color: '#4ECDC4', textSize: 6, x: 25, y: 50, z: 0 }
+      ],
+      links: [
+        { source: 'Node1', target: 'Node2', color: '#F0F0F0', thickness: 5 },
+        { source: 'Node2', target: 'Node3', color: '#F0F0F0', thickness: 1 }
+      ]
+    };
+    setGraphId('sandbox-mode');
+    setGraphData(sampleData);
+    setRecordedOGPositions({ nodes: [], links: [] });
+    setCameraBookmarks([]);
+    setIsDatabaseSelected(true);
+    appendConsoleLine('Started in Sandbox Mode. Changes will not be saved.');
   };
 
   const handleLoadFile = () => {
@@ -1836,6 +1928,162 @@ function App() {
     
     return group;
   };
+
+  if (!isDatabaseSelected) {
+    return (
+      <div className="relative flex min-h-screen w-screen flex-col items-center justify-center bg-black font-sans text-zinc-100 overflow-y-auto px-4 py-8 select-none">
+        
+        {/* Abstract glowing cyberpunk background circles */}
+        <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-emerald-500/5 blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-[450px] h-[450px] rounded-full bg-cyan-500/5 blur-[150px] pointer-events-none" />
+        
+        <div className="relative z-10 w-full max-w-4xl space-y-8">
+          {/* Logo & Brand Header */}
+          <div className="text-center space-y-2">
+            <h1 className="text-5xl font-extrabold tracking-wider bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(6,182,212,0.3)] font-mono">
+              MINDMAP 3D
+            </h1>
+            <p className="text-xs uppercase tracking-[0.25em] text-zinc-400 font-mono">
+              Interactive Knowledge Visualizer
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            
+            {/* Left Box: Connect to Existing Database */}
+            <Card className="bg-zinc-950/70 border-zinc-800/80 backdrop-blur-md shadow-[0_0_50px_rgba(0,255,65,0.02)] flex flex-col h-[480px]">
+              <CardHeader className="border-b border-zinc-900 pb-4">
+                <CardTitle className="text-sm font-mono tracking-widest text-[#00ff41] uppercase flex items-center justify-between">
+                  <span>Connect to Database</span>
+                  <span className="text-[10px] text-zinc-500 font-normal normal-case">
+                    {currentUser ? `User: ${currentUser.email}` : 'Guest Session'}
+                  </span>
+                </CardTitle>
+              </CardHeader>
+              
+              <CardContent className="flex-1 flex flex-col p-4 overflow-hidden">
+                {isLoadingCatalog ? (
+                  <div className="flex-1 flex flex-col items-center justify-center space-y-3">
+                    <div className="w-8 h-8 rounded-full border-2 border-[#00ff41]/20 border-t-[#00ff41] animate-spin" />
+                    <span className="text-xs font-mono text-zinc-500 tracking-wider">Reading catalog...</span>
+                  </div>
+                ) : catalogError ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-4 space-y-3">
+                    <span className="text-red-500 text-xs font-mono">{catalogError}</span>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={async () => {
+                        try {
+                          setCatalogError('');
+                          setIsLoadingCatalog(true);
+                          const list = await fetchGraphCatalog();
+                          setDbCatalog(list);
+                        } catch (err) {
+                          setCatalogError(err.message || 'Failed to reload catalog');
+                        } finally {
+                          setIsLoadingCatalog(false);
+                        }
+                      }}
+                      className="text-xs font-mono border-zinc-800 hover:bg-zinc-900"
+                    >
+                      Retry Catalog Fetch
+                    </Button>
+                  </div>
+                ) : dbCatalog.length === 0 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-4 space-y-2">
+                    <span className="text-zinc-500 text-xs font-mono">No database records found in this workspace.</span>
+                    <span className="text-[10px] text-zinc-600 font-mono">Initialize a new database on the right or launch Sandbox Mode below.</span>
+                  </div>
+                ) : (
+                  <div className="flex-1 overflow-y-auto pr-1 space-y-2.5 custom-scrollbar">
+                    {dbCatalog.map(db => (
+                      <div 
+                        key={db.id} 
+                        className="group flex items-center justify-between p-3 rounded-lg border border-zinc-900 bg-zinc-900/20 hover:bg-zinc-900/60 hover:border-zinc-800/80 transition-all duration-300"
+                      >
+                        <div className="space-y-1 truncate pr-3">
+                          <p className="font-mono text-sm font-semibold text-zinc-100 truncate group-hover:text-[#00ffff] transition-colors">
+                            {db.id}
+                          </p>
+                          <p className="text-[9px] text-zinc-500 font-mono">
+                            Modified: {new Date(db.updated_at).toLocaleString()}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleSelectDatabase(db.id)}
+                          className="bg-[#00ffff]/10 border border-[#00ffff]/20 hover:bg-[#00ffff]/20 hover:border-[#00ffff]/40 text-[#00ffff] text-xs font-mono h-8 px-4"
+                        >
+                          Connect
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Right Box: Create New Database & Sandbox */}
+            <Card className="bg-zinc-950/70 border-zinc-800/80 backdrop-blur-md shadow-[0_0_50px_rgba(6,182,212,0.02)] flex flex-col h-[480px]">
+              <CardHeader className="border-b border-zinc-900 pb-4">
+                <CardTitle className="text-sm font-mono tracking-widest text-[#00ffff] uppercase">
+                  Initialize Database
+                </CardTitle>
+              </CardHeader>
+              
+              <CardContent className="flex-1 flex flex-col justify-between p-4">
+                {/* Create Database Input */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-zinc-400 font-mono">New Database Name / ID</Label>
+                    <Input
+                      placeholder="e.g. project-x-data"
+                      value={newDbId}
+                      onChange={e => setNewDbId(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ''))}
+                      onKeyDown={e => { if (e.key === 'Enter') handleCreateDatabase(); }}
+                      className="bg-black/50 border-zinc-800 focus:border-[#00ffff] font-mono text-sm text-[#00ffff]"
+                    />
+                    <p className="text-[9px] text-zinc-500 font-mono leading-relaxed">
+                      Accepts alphanumeric characters, hyphens, and underscores. Creates a fresh, empty workspace in your account.
+                    </p>
+                  </div>
+
+                  <Button
+                    onClick={handleCreateDatabase}
+                    disabled={!newDbId.trim()}
+                    className="w-full bg-[#00ffff] hover:bg-[#06b6d4] text-black font-mono font-bold tracking-wider text-xs h-10 border-none shadow-[0_0_15px_rgba(6,182,212,0.2)]"
+                  >
+                    Create & Launch
+                  </Button>
+                </div>
+
+                <Separator className="border-zinc-900/60 my-6" />
+
+                {/* Sandbox / Bypass Selection */}
+                <div className="space-y-4 bg-zinc-900/10 border border-zinc-900/40 rounded-xl p-4">
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-bold font-mono text-zinc-300">Sandbox Mode</h4>
+                    <p className="text-[10px] text-zinc-500 font-mono leading-normal">
+                      Bypass selection and play with dummy data. None of your adjustments will sync to your cloud account.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleStartSandbox}
+                    variant="outline"
+                    className="w-full border-zinc-800 hover:bg-zinc-900 text-zinc-300 font-mono text-xs h-10"
+                  >
+                    Launch Sandbox Workspace
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-screen w-screen bg-black text-white">
