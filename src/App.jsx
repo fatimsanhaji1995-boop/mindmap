@@ -17,50 +17,64 @@ import { getDescendants, filterGraphByCollapsedNodes, toggleNodeCollapse, isNode
 import { parseClipboardData, createNodesFromPaste } from '@/lib/clipboardUtils';
 import './App.css';
 
-// Creates a THREE.Sprite with neon glow — same visual as the console text-shadow
+// Creates a THREE.Sprite with neon glow — glassmorphic capsule design
 const _spriteCache = new Map();
-function makeCyberpunkSprite(text, color = '#00ff41', textHeight = 6) {
-  const cacheKey = `${text}||${color}||${textHeight}`;
+const _textureCache = new Map();
+function makeCyberpunkSprite(text, color = '#00ff41', textHeight = 6, isTimeline = false) {
+  const cacheKey = `${text}||${color}||${textHeight}||${isTimeline}`;
   if (_spriteCache.has(cacheKey)) return _spriteCache.get(cacheKey).clone();
 
-  const fontSize = 52;
+  const fontSize = 44;
   const font = `bold ${fontSize}px "Courier New", monospace`;
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   ctx.font = font;
   const textW = Math.ceil(ctx.measureText(text).width);
-  const pad = 22;
-  canvas.width  = textW + pad * 2;
-  canvas.height = fontSize + pad * 2;
+  
+  const padX = 24;
+  const padY = 16;
+  const w = textW + padX * 2;
+  const h = fontSize + padY * 2;
+  
+  canvas.width  = w + 24; // Extra space for shadow glow
+  canvas.height = h + 24;
   ctx.font = font;
-
-  const tx = pad;
-  const ty = fontSize + pad * 0.55;
-
-  // Outer glow pass
-  ctx.shadowBlur  = 8;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
+  
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  
+  // Set glow shadow styles
   ctx.shadowColor = color;
-  ctx.fillStyle   = color;
-  ctx.globalAlpha = 0.2;
-  ctx.fillText(text, tx, ty);
-
-  // Mid glow pass
-  ctx.shadowBlur  = 4;
-  ctx.globalAlpha = 0.5;
-  ctx.fillText(text, tx, ty);
-
-  // Sharp crisp text on top
-  ctx.shadowBlur  = 2;
-  ctx.globalAlpha = 1;
-  ctx.fillText(text, tx, ty);
-
+  ctx.shadowBlur = 12;
+  
+  // Draw capsule background
+  ctx.fillStyle = isTimeline ? 'rgba(255, 215, 0, 0.12)' : 'rgba(0, 255, 65, 0.05)';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 3;
+  
+  const r = h / 2;
+  ctx.beginPath();
+  ctx.arc(cx - w/2 + r, cy - h/2 + r, r, Math.PI * 0.5, Math.PI * 1.5);
+  ctx.lineTo(cx + w/2 - r, cy - h/2);
+  ctx.arc(cx + w/2 - r, cy - h/2 + r, r, Math.PI * 1.5, Math.PI * 0.5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  
+  // Draw Text with neon glow
+  ctx.shadowBlur = 4;
+  ctx.fillStyle = isTimeline ? '#FFD700' : '#ffffff';
+  ctx.fillText(text, cx, cy);
+  
   const texture  = new THREE.CanvasTexture(canvas);
   const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false });
   const sprite   = new THREE.Sprite(material);
   const aspect   = canvas.width / canvas.height;
-  const h        = textHeight * 2.2;
-  sprite.scale.set(aspect * h, h, 1);
-
+  const scaleH   = textHeight * 1.8;
+  sprite.scale.set(aspect * scaleH, scaleH, 1);
+  
   _spriteCache.set(cacheKey, sprite);
   return sprite.clone();
 }
@@ -69,10 +83,10 @@ const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov
 const QUARTER_MONTHS = { full:[0,1,2,3,4,5,6,7,8,9,10,11], Q1:[0,1,2], Q2:[3,4,5], Q3:[6,7,8], Q4:[9,10,11] };
 
 const LINK_TYPES = {
-  wire:   { label: 'Wire',   color: '#F0F0F0', width: 1,   particles: 0, particleSpeed: 0,     particleWidth: 0, particleColor: '#ffffff' },
-  stream: { label: 'Stream', color: '#00ffff', width: 1.5, particles: 3, particleSpeed: 0.004, particleWidth: 2, particleColor: '#00ffff' },
-  pulse:  { label: 'Pulse',  color: '#ff00cc', width: 3,   particles: 6, particleSpeed: 0.009, particleWidth: 3, particleColor: '#ff00cc' },
-  ghost:  { label: 'Ghost',  color: '#334455', width: 0.4, particles: 0, particleSpeed: 0,     particleWidth: 0, particleColor: '#334455' },
+  wire:   { label: 'Wire',   color: 'rgba(0, 243, 255, 0.25)', width: 0.8, particles: 1, particleSpeed: 0.002, particleWidth: 1.2, particleColor: '#00ffff' },
+  stream: { label: 'Stream', color: '#00ffff', width: 1.5, particles: 3, particleSpeed: 0.005, particleWidth: 2, particleColor: '#00ffff' },
+  pulse:  { label: 'Pulse',  color: '#ff007f', width: 2.5, particles: 5, particleSpeed: 0.01, particleWidth: 2.5, particleColor: '#ff007f' },
+  ghost:  { label: 'Ghost',  color: 'rgba(255, 255, 255, 0.06)', width: 0.4, particles: 0, particleSpeed: 0,     particleWidth: 0, particleColor: '#334455' },
 };
 
 function App() {
@@ -1571,12 +1585,33 @@ function App() {
   }, [autoRotate, rotationSpeed]);
 
 
-  // Bloom post-processing
+  // Bloom post-processing & Atmosphere Starfield
   useEffect(() => {
     const graph = graphRef.current;
     if (!graph) return;
     const init = () => {
       try {
+        // Add Cyberpunk green starfield in the background
+        const scene = graph.scene();
+        if (scene) {
+          const starsGeometry = new THREE.BufferGeometry();
+          const starsCount = 400;
+          const positions = new Float32Array(starsCount * 3);
+          for (let i = 0; i < starsCount * 3; i++) {
+            positions[i] = (Math.random() - 0.5) * 1600;
+          }
+          starsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+          const starsMaterial = new THREE.PointsMaterial({
+            color: '#00ff41',
+            size: 1.6,
+            transparent: true,
+            opacity: 0.35,
+            sizeAttenuation: true
+          });
+          const starField = new THREE.Points(starsGeometry, starsMaterial);
+          scene.add(starField);
+        }
+
         const composer = graph.postProcessingComposer();
         if (!composer || bloomRef.current) return;
         import('three/examples/jsm/postprocessing/UnrealBloomPass.js').then(({ UnrealBloomPass }) => {
@@ -1730,27 +1765,59 @@ function App() {
     ? { ...baseDisplayData, nodes: [...baseDisplayData.nodes, { id: inlineNodeText || '…', color: '#00ff41', textSize: 6, isPreview: true, ...inlineNodePos }] }
     : baseDisplayData;
 
-  // Create image sprites for image nodes
-  const makeImageSprite = (imageUrl) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 128;
-    const ctx = canvas.getContext('2d');
+  // Create 3D image cards with dynamic texture loading and neon pink border
+  const makeImageNodeObject = (imageUrl) => {
+    const group = new THREE.Group();
+    const cardWidth = 14;
+    const cardHeight = 14;
+    const geometry = new THREE.PlaneGeometry(cardWidth, cardHeight);
     
-    // Create a placeholder for images (will be replaced with actual image rendering)
-    ctx.fillStyle = '#FF6B9D';
-    ctx.fillRect(0, 0, 128, 128);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 14px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('IMG', 64, 64);
+    const material = new THREE.MeshBasicMaterial({
+      color: '#FF6B9D',
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.85
+    });
     
-    const texture = new THREE.CanvasTexture(canvas);
-    const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false });
-    const sprite = new THREE.Sprite(material);
-    sprite.scale.set(8, 8, 1);
-    return sprite;
+    const mesh = new THREE.Mesh(geometry, material);
+    group.add(mesh);
+    
+    if (imageUrl) {
+      if (_textureCache.has(imageUrl)) {
+        material.map = _textureCache.get(imageUrl);
+        material.color.set('#ffffff');
+        material.needsUpdate = true;
+      } else {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const texture = new THREE.CanvasTexture(img);
+          _textureCache.set(imageUrl, texture);
+          material.map = texture;
+          material.color.set('#ffffff');
+          material.needsUpdate = true;
+        };
+        img.src = imageUrl;
+      }
+    }
+    
+    // Glowing neon border frame around the image card
+    const borderGeo = new THREE.BufferGeometry();
+    const halfW = cardWidth / 2;
+    const halfH = cardHeight / 2;
+    const vertices = new Float32Array([
+      -halfW, -halfH, 0.1,
+       halfW, -halfH, 0.1,
+       halfW,  halfH, 0.1,
+      -halfW,  halfH, 0.1,
+      -halfW, -halfH, 0.1
+    ]);
+    borderGeo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    const borderMat = new THREE.LineBasicMaterial({ color: '#ff007f', linewidth: 2 });
+    const border = new THREE.Line(borderGeo, borderMat);
+    group.add(border);
+    
+    return group;
   };
 
   return (
@@ -1814,40 +1881,85 @@ function App() {
         nodeLabel="id"
         nodeAutoColorBy="group"
         nodeThreeObject={node => {
+          const group = new THREE.Group();
+
+          // 1. Generate 3D physical geometry mesh
+          let geom, mat;
           if (node.nodeType === 'timeline') {
-            const sprite = new SpriteText(node.id);
-            sprite.color           = '#000000';
-            sprite.backgroundColor = '#FFD700';
-            sprite.padding         = 4;
-            sprite.borderRadius    = 0;
-            sprite.borderWidth     = 1.5;
-            sprite.borderColor     = '#FFA500';
-            sprite.textHeight      = node.textSize || 10;
-            return sprite;
+            geom = new THREE.OctahedronGeometry(4);
+            mat = new THREE.MeshStandardMaterial({
+              color: '#FFD700',
+              emissive: '#FFD700',
+              emissiveIntensity: 0.8,
+              metalness: 0.9,
+              roughness: 0.1,
+            });
+          } else if (node.nodeType === 'image' && node.imageUrl) {
+            return makeImageNodeObject(node.imageUrl);
+          } else if (node.nodeType === 'text') {
+            geom = new THREE.TorusGeometry(3.5, 0.9, 8, 16);
+            mat = new THREE.MeshStandardMaterial({
+              color: node.color || '#00ffff',
+              emissive: node.color || '#00ffff',
+              emissiveIntensity: 0.7,
+              metalness: 0.8,
+              roughness: 0.2,
+            });
+          } else if (node.nodeType === 'link') {
+            geom = new THREE.CylinderGeometry(2, 2, 6, 8);
+            mat = new THREE.MeshStandardMaterial({
+              color: '#0088ff',
+              emissive: '#0088ff',
+              emissiveIntensity: 0.7,
+              metalness: 0.8,
+              roughness: 0.2,
+            });
+          } else {
+            // Default standard node
+            geom = new THREE.SphereGeometry(3.2, 16, 16);
+            mat = new THREE.MeshStandardMaterial({
+              color: node.color || '#00ff41',
+              emissive: node.color || '#00ff41',
+              emissiveIntensity: 0.6,
+              metalness: 0.8,
+              roughness: 0.2,
+            });
           }
-          if (node.nodeType === 'image' && node.imageUrl) {
-            return makeImageSprite(node.imageUrl);
+
+          const mesh = new THREE.Mesh(geom, mat);
+          
+          // Self-rotation in render loop using native onBeforeRender callback
+          mesh.onBeforeRender = () => {
+            mesh.rotation.y += 0.015;
+            mesh.rotation.x += 0.007;
+          };
+          group.add(mesh);
+
+          // 2. Generate and attach the elegant floating UI label tag
+          let tag;
+          if (node.nodeType === 'timeline') {
+            tag = makeCyberpunkSprite(node.id, '#FFD700', 8, true);
+          } else if (node.nodeType === 'link' && node.url) {
+            const urlPreview = node.url.replace(/https?:\/\/(www\.)?/, '').substring(0, 18) + (node.url.length > 18 ? '…' : '');
+            tag = makeCyberpunkSprite(urlPreview, '#0088ff', 5);
+          } else if (node.nodeType === 'text' && node.textContent) {
+            const preview = node.textContent.substring(0, 20) + (node.textContent.length > 20 ? '…' : '');
+            tag = makeCyberpunkSprite(preview, node.color || '#00ffff', 6);
+          } else {
+            tag = makeCyberpunkSprite(node.id, node.color || '#00ff41', 5);
           }
-          if (node.nodeType === 'link' && node.url) {
-            const urlPreview = node.url.substring(0, 20) + (node.url.length > 20 ? '...' : '');
-            const sprite = new SpriteText(urlPreview);
-            sprite.color = '#000000';
-            sprite.backgroundColor = '#FFD700';
-            sprite.padding = 3;
-            sprite.textHeight = 5;
-            return sprite;
-          }
-          if (node.nodeType === 'text' && node.textContent) {
-            const preview = node.textContent.substring(0, 25) + (node.textContent.length > 25 ? '...' : '');
-            return makeCyberpunkSprite(preview, node.color || '#00ffff', node.textSize || 6);
-          }
-          return makeCyberpunkSprite(node.id, node.color || '#00ff41', node.textSize || 6);
+
+          tag.position.y = node.nodeType === 'timeline' ? 9 : 8;
+          group.add(tag);
+
+          return group;
         }}
+        linkCurvature={0.2}
         linkWidth={link => {
           const lt = LINK_TYPES[link.linkType] || LINK_TYPES.wire;
           return link.thickness ?? lt.width;
         }}
-        linkOpacity={1}
+        linkOpacity={0.65}
         linkColor={link => {
           const lt = LINK_TYPES[link.linkType] || LINK_TYPES.wire;
           return link.color || lt.color;
