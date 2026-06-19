@@ -1,6 +1,7 @@
 /* eslint-env node */
 import { getDb } from '../_lib/db.js';
 import { getSingleUserId } from '../_lib/single-user.js';
+import { getUserFromRequest } from '../_lib/auth.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -10,7 +11,14 @@ export default async function handler(req, res) {
 
   try {
     const db = getDb();
-    const userId = await getSingleUserId(db);
+    const user = getUserFromRequest(req);
+    let userId;
+    if (user) {
+      userId = user.userId;
+    } else {
+      userId = await getSingleUserId(db);
+    }
+
     const result = await db.query(
       'SELECT id, updated_at FROM graphs WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 100',
       [userId],

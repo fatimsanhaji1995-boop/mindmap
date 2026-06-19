@@ -1,5 +1,6 @@
 /* eslint-env node */
 import { getDb } from '../_lib/db.js';
+import { getUserFromRequest } from '../_lib/auth.js';
 
 const SINGLE_USER_EMAIL = process.env.SINGLE_USER_EMAIL || 'solo@mindmap.local';
 const SINGLE_USER_PASSWORD_HASH = process.env.SINGLE_USER_PASSWORD_HASH || 'single-user-mode';
@@ -84,7 +85,13 @@ export default async function handler(req, res) {
 
   try {
     const db = getDb();
-    const userId = await getSingleUserId(db);
+    const user = getUserFromRequest(req);
+    let userId;
+    if (user) {
+      userId = user.userId;
+    } else {
+      userId = await getSingleUserId(db);
+    }
 
     if (req.method === 'GET') {
       const result = await db.query(

@@ -10,10 +10,6 @@ function getDatabaseUrl() {
     throw new Error('DATABASE_URL is not configured.');
   }
 
-  if (!databaseUrl.includes('-pooler')) {
-    throw new Error('DATABASE_URL must use the Neon pooled connection string (contains "-pooler").');
-  }
-
   return databaseUrl;
 }
 
