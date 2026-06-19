@@ -88,6 +88,7 @@ const LINK_TYPES = {
   stream: { label: 'Stream', color: '#00ffff', width: 1.5, particles: 3, particleSpeed: 0.005, particleWidth: 2, particleColor: '#00ffff' },
   pulse:  { label: 'Pulse',  color: '#ff007f', width: 2.5, particles: 5, particleSpeed: 0.01, particleWidth: 2.5, particleColor: '#ff007f' },
   ghost:  { label: 'Ghost',  color: 'rgba(255, 255, 255, 0.06)', width: 0.4, particles: 0, particleSpeed: 0,     particleWidth: 0, particleColor: '#334455' },
+  'calendar-pin': { label: 'Calendar Pin', color: 'rgba(255, 215, 0, 0.2)', width: 1.2, particles: 2, particleSpeed: 0.004, particleWidth: 1.5, particleColor: '#FFD700' }
 };
 
 const PRESET_COLORS = [
@@ -1693,6 +1694,150 @@ function App() {
       graphRef.current.d3Force('center', null); // Disable centering force
     }
   }, []);
+
+  // Synchronize calendar timeline nodes and connection pins based on node dates
+  useEffect(() => {
+    if (!graphData.nodes || graphData.nodes.length === 0) return;
+
+    const requiredTimelineIds = new Set();
+    const desiredLinks = [];
+    
+    // Find all task nodes with a valid date property
+    const tasksWithDate = graphData.nodes.filter(n => n.date && n.nodeType !== 'timeline');
+    
+    tasksWithDate.forEach(node => {
+      const dateObj = new Date(node.date);
+      if (!isNaN(dateObj.getTime())) {
+        const monthStr = MONTHS[dateObj.getMonth()];
+        const yearStr = dateObj.getFullYear();
+        const timelineId = `${monthStr} ${yearStr}`;
+        requiredTimelineIds.add(timelineId);
+        
+        // Desired calendar pin link
+        desiredLinks.push({
+          source: node.id,
+          target: timelineId,
+          color: 'rgba(255, 215, 0, 0.2)', // Matches our 'calendar-pin' config
+          thickness: 1.2,
+          linkType: 'calendar-pin'
+        });
+      }
+    });
+    
+    const existingTimelineIds = new Set(graphData.nodes.filter(n => n.nodeType === 'timeline').map(n => n.id));
+    
+    let needsUpdate = false;
+    const nodesToAdd = [];
+    const linksToAdd = [];
+    
+    // Sort required months chronologically
+    const sortedTimelineIds = Array.from(requiredTimelineIds).sort((a, b) => {
+      const [mA, yA] = a.split(' ');
+      const [mB, yB] = b.split(' ');
+      const valA = parseInt(yA) * 12 + MONTHS.indexOf(mA);
+      const valB = parseInt(yB) * 12 + MONTHS.indexOf(mB);
+      return valA - valB;
+    });
+
+    sortedTimelineIds.forEach((timelineId, idx) => {
+      if (!existingTimelineIds.has(timelineId)) {
+        needsUpdate = true;
+        // Helical calendar wave in 3D: waves dynamically along y/z axes
+        const spacing = 140;
+        const x = idx * spacing;
+        const y = timelineSpacingY + Math.sin(idx * 0.8) * 45;
+        const z = Math.cos(idx * 0.8) * 45;
+        nodesToAdd.push({
+          id: timelineId,
+          color: '#FFD700', // Gold
+          textSize: 10,
+          group: 'timeline',
+          nodeType: 'timeline',
+          x, y, z,
+          fx: x, fy: y, fz: z
+        });
+      }
+    });
+
+    // Desired ghost timeline spine links (ghost links connect the dates chronologically)
+    for (let i = 0; i < sortedTimelineIds.length - 1; i++) {
+      const source = sortedTimelineIds[i];
+      const target = sortedTimelineIds[i + 1];
+      const exists = graphData.links.some(l => l.linkType === 'ghost' && 
+        ((typeof l.source === 'object' ? l.source.id : l.source) === source) && 
+        ((typeof l.target === 'object' ? l.target.id : l.target) === target)
+      );
+      if (!exists) {
+        needsUpdate = true;
+        linksToAdd.push({
+          source,
+          target,
+          color: LINK_TYPES.ghost.color,
+          thickness: LINK_TYPES.ghost.width,
+          linkType: 'ghost'
+        });
+      }
+    }
+
+    // Determine if any required pin links are missing
+    const missingPinLinks = desiredLinks.filter(desired => {
+      return !graphData.links.some(l => 
+        l.linkType === 'calendar-pin' &&
+        ((typeof l.source === 'object' ? l.source.id : l.source) === desired.source) &&
+        ((typeof l.target === 'object' ? l.target.id : l.target) === desired.target)
+      );
+    });
+
+    if (missingPinLinks.length > 0) {
+      needsUpdate = true;
+      linksToAdd.push(...missingPinLinks);
+    }
+
+    // Find any obsolete pin links (e.g. task's date changed or was cleared)
+    const obsoleteLinks = graphData.links.filter(l => {
+      if (l.linkType !== 'calendar-pin') return false;
+      const sId = typeof l.source === 'object' ? l.source.id : l.source;
+      const tId = typeof l.target === 'object' ? l.target.id : l.target;
+      return !desiredLinks.some(d => d.source === sId && d.target === tId);
+    });
+
+    if (obsoleteLinks.length > 0) {
+      needsUpdate = true;
+    }
+
+    if (needsUpdate) {
+      setGraphData(prev => {
+        // Filter out obsolete links
+        const cleanLinks = prev.links.filter(l => !obsoleteLinks.includes(l));
+        
+        // Merge nodes safely (no duplicates)
+        const cleanNodes = [...prev.nodes];
+        nodesToAdd.forEach(n => {
+          if (!cleanNodes.some(existing => existing.id === n.id)) {
+            cleanNodes.push(n);
+          }
+        });
+
+        // Merge links safely
+        const cleanLinksMerged = [...cleanLinks];
+        linksToAdd.forEach(l => {
+          const exists = cleanLinksMerged.some(existing => 
+            ((typeof existing.source === 'object' ? existing.source.id : existing.source) === l.source) &&
+            ((typeof existing.target === 'object' ? existing.target.id : existing.target) === l.target) &&
+            existing.linkType === l.linkType
+          );
+          if (!exists) {
+            cleanLinksMerged.push(l);
+          }
+        });
+
+        return {
+          nodes: cleanNodes,
+          links: cleanLinksMerged
+        };
+      });
+    }
+  }, [graphData.nodes, graphData.links, timelineSpacingY]);
 
   useEffect(() => {
     if (autoRotate && graphRef.current) {
